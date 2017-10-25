@@ -143,9 +143,11 @@ print('{}  - Using the device `{}` for neural computation.{}\n'.format(ansi.CYAN
 class SubpixelReshuffleLayer(lasagne.layers.Layer):
     """Based on the code by ajbrock: https://github.com/ajbrock/Neural-Photo-Editor/
     """
+    # inherets lasagne.layers.Layer
 
     def __init__(self, incoming, channels, upscale, **kwargs):
         super(SubpixelReshuffleLayer, self).__init__(incoming, **kwargs)
+        # incoming == layer, channels is , upscale is size of change
         self.upscale = upscale
         self.channels = channels
 
@@ -170,26 +172,21 @@ class Model(object):
         # InputLayer represents network input
         # first arg is dimension of element
         # represents the image placed in OrderedDict
-        # InputLayer is lasagne
+        # InputLayer is lasagne function
         self.network['img'] = InputLayer((None, 3, None, None))
         # put seed of img in OrderedDict
         self.network['seed'] = InputLayer((None, 3, None, None))
-
         # loads neural network model from bz2 file
         # configs is a dict with generator values
         # such as filter, residual, upscale (zoom) value
         # params keys of network keys and np arrays
         config, params = self.load_model()
-
-
-
         # create generator
         self.setup_generator(self.last_layer(), config)
-
-
-
-
+        # load generator
         self.load_generator(params)
+        # calls function to generate callable objects from graphs
+        # used mainly during testing
         self.compile()
 
     #------------------------------------------------------------------------------------------------------------------
@@ -198,6 +195,8 @@ class Model(object):
 
     def last_layer(self):
         # returns last value from neural network OrderedDict
+        # without destroying it
+        # used for connecting next neuron
         return list(self.network.values())[-1]
 
 
@@ -224,6 +223,8 @@ class Model(object):
     def make_block(self, name, input, units):
         # create another layer
         self.make_layer(name+'-A', input, units, alpha=0.1)
+        # performs elementwise sum of input layers,
+        # which all must have same shape
         return ElemwiseSumLayer([input, self.last_layer()]) if args.generator_residual else self.last_layer()
 
 
@@ -237,7 +238,7 @@ class Model(object):
         # raises diff of image scale to exponent of 2
         # each side factor x increases area by 2**x
         args.zoom = 2**(args.generator_upscale - args.generator_downscale)
-        # transforms multiple arrays into one array
+        # extend transforms multiple arrays into one array
         units_iter = extend(args.generator_filters)
         # returns next item in iterator
         units = next(units_iter)
@@ -252,21 +253,35 @@ class Model(object):
         units = next(units_iter)
         # iterate through generator_blocks
         for i in range(0, args.generator_blocks):
-
+            # create new block which sums layers
             self.make_block('iter.%i'%(i+1), self.last_layer(), units)
 
+        # creates hidden layers for upscale generator neural networks
         for i in range(0, args.generator_upscale):
+            # next fitler
             u = next(units_iter)
+            # create new upscale layer for neural network
+            # u*4 is larger filter size
             self.make_layer('upscale%i.2'%i, self.last_layer(), u*4)
+            # add new layer to neural network
+            # generate SubpixelReshuffleLayer object
+            # at specific dict in neural network
             self.network['upscale%i.1'%i] = SubpixelReshuffleLayer(self.last_layer(), u, 2)
-
+        # create output neuron in network using lasagne Conv2DLayer
         self.network['out'] = ConvLayer(self.last_layer(), 3, filter_size=(7,7), pad=(3,3), nonlinearity=None)
 
 
     def list_generator_layers(self):
+        # lasagne get_all_layers collects all layers just below the output layer
+        # layers are preceded by layers they are dependent upon
+        # network['out'] is neural network output, network['img'] is input
+        # yeild keyword returns a generator for name and lasagne layer
         for l in lasagne.layers.get_all_layers(self.network['out'], treat_as_input=[self.network['img']]):
+            # skip if not params
             if not l.get_params(): continue
+            # make a dict of keys, index of layer
             name = list(self.network.keys())[list(self.network.values()).index(l)]
+            # return generator of name, lasagne layer pair
             yield (name, l)
 
 
@@ -276,16 +291,6 @@ class Model(object):
         filename = 'ne%ix-%s-%s-%s.pkl.bz2' % (args.zoom, args.type, args.model, __version__)
         # return absoulte path of the network
         return os.path.join(os.path.dirname(__file__), filename) if absolute else filename
-
-
-    def save_generator(self):
-        def cast(p): return p.get_value().astype(np.float16)
-        params = {k: [cast(p) for p in l.get_params()] for (k, l) in self.list_generator_layers()}
-        config = {k: getattr(args, k) for k in ['generator_blocks', 'generator_residual', 'generator_filters'] + \
-                                               ['generator_upscale', 'generator_downscale']}
-
-        pickle.dump((config, params), bz2.open(self.get_filename(absolute=True), 'wb'))
-        print('  - Saved model as `{}` after training.'.format(self.get_filename()))
 
 
     def load_model(self):
@@ -304,67 +309,42 @@ class Model(object):
 
 
     def load_generator(self, params):
+        # return if there are no params
         if len(params) == 0: return
+        # generator for name and layer of lasagne layer
         for k, l in self.list_generator_layers():
+            # error if layer is not found
             assert k in params, "Couldn't find layer `%s` in loaded model.'" % k
+            # error if layers are not same size, which is a mismatch
             assert len(l.get_params()) == len(params[k]), "Mismatch in types of layers."
+            # itererate over lasagne parameters
             for p, v in zip(l.get_params(), params[k]):
+                # determines if shape of numpy array is same,
+                # since each layer must be the same size
                 assert v.shape == p.get_value().shape, "Mismatch in number of parameters for layer {}.".format(k)
+                # p is theano TensorSharedVariable
+                # sets shared variable of p to numpy array
                 p.set_value(v.astype(np.float32))
 
     #------------------------------------------------------------------------------------------------------------------
     # Training & Loss Functions
     #------------------------------------------------------------------------------------------------------------------
 
-    def loss_perceptual(self, p):
-        return lasagne.objectives.squared_error(p[:args.batch_size], p[args.batch_size:]).mean()
-
-
-    def loss_total_variation(self, x):
-        return T.mean(((x[:,:,:-1,:-1] - x[:,:,1:,:-1])**2 + (x[:,:,:-1,:-1] - x[:,:,:-1,1:])**2)**1.25)
-
-
-    def loss_adversarial(self, d):
-        return T.mean(1.0 - T.nnet.softminus(d[args.batch_size:]))
-
-
-    def loss_discriminator(self, d):
-        return T.mean(T.nnet.softminus(d[args.batch_size:]) - T.nnet.softplus(d[:args.batch_size]))
-
-
     def compile(self):
         # Helper function for rendering test images during training, or standalone inference mode.
+        # required input tensor vars
         input_tensor, seed_tensor = T.tensor4(), T.tensor4()
+        # create dict of input neuron 'img' and next neuron 'seed'
+        # and connects value to tensorflow inputs
         input_layers = {self.network['img']: input_tensor, self.network['seed']: seed_tensor}
+        # computes output of network at given layers,
+        # including seed and out, and is given optional input layer
+        # the output is tensorflow objects
         output = lasagne.layers.get_output([self.network[k] for k in ['seed','out']], input_layers, deterministic=True)
+        # compiles graph into callable object
+        # called a theano.function
+        # which is called in the for loop in model.process
         self.predict = theano.function([seed_tensor], output)
-
-        if not args.train: return
-
-        output_layers = [self.network['out'], self.network[args.perceptual_layer], self.network['disc']]
-        gen_out, percept_out, disc_out = lasagne.layers.get_output(output_layers, input_layers, deterministic=False)
-
-        # Generator loss function, parameters and updates.
-        self.gen_lr = theano.shared(np.array(0.0, dtype=theano.config.floatX))
-        self.adversary_weight = theano.shared(np.array(0.0, dtype=theano.config.floatX))
-        gen_losses = [self.loss_perceptual(percept_out) * args.perceptual_weight,
-                      self.loss_total_variation(gen_out) * args.smoothness_weight,
-                      self.loss_adversarial(disc_out) * self.adversary_weight]
-        gen_params = lasagne.layers.get_all_params(self.network['out'], trainable=True)
-        print('  - {} tensors learned for generator.'.format(len(gen_params)))
-        gen_updates = lasagne.updates.adam(sum(gen_losses, 0.0), gen_params, learning_rate=self.gen_lr)
-
-        # Discriminator loss function, parameters and updates.
-        self.disc_lr = theano.shared(np.array(0.0, dtype=theano.config.floatX))
-        disc_losses = [self.loss_discriminator(disc_out)]
-        disc_params = list(itertools.chain(*[l.get_params() for k, l in self.network.items() if 'disc' in k]))
-        print('  - {} tensors learned for discriminator.'.format(len(disc_params)))
-        grads = [g.clip(-5.0, +5.0) for g in T.grad(sum(disc_losses, 0.0), disc_params)]
-        disc_updates = lasagne.updates.adam(grads, disc_params, learning_rate=self.disc_lr)
-
-        # Combined Theano function for updating both generator and discriminator at the same time.
-        updates = collections.OrderedDict(list(gen_updates.items()) + list(disc_updates.items()))
-        self.fit = theano.function([input_tensor, seed_tensor], gen_losses + [disc_out.mean(axis=(1,2,3))], updates=updates)
 
 
 # neural enhance class
@@ -394,28 +374,36 @@ class NeuralEnhancer(object):
 
     def process(self, original):
         # Snap the image to a shape that's compatible with the generator (2x, 4x)
+        # raises image scale to exponent of 2
+        # each side factor x increases area by 2**x
         s = 2 ** max(args.generator_upscale, args.generator_downscale)
+        # original is image as numpy array
+        # by, bx number of rows, cols respectively of numpy image array
+        # and not flow over image factor of change
         by, bx = original.shape[0] % s, original.shape[1] % s
+        # trims image
         original = original[by-by//2:original.shape[0]-by//2,bx-bx//2:original.shape[1]-bx//2,:]
-
         # Prepare paded input image as well as output buffer of zoomed size.
+        # shorten names of arguments, no need to reference
         s, p, z = args.rendering_tile, args.rendering_overlap, args.zoom
+        # pads the numpy array
         image = np.pad(original, ((p, p), (p, p), (0, 0)), mode='reflect')
+        # creates empty array of size orig * factor increase
         output = np.zeros((original.shape[0] * z, original.shape[1] * z, 3), dtype=np.float32)
-
         # Iterate through the tile coordinates and pass them through the network.
         for y, x in itertools.product(range(0, original.shape[0], s), range(0, original.shape[1], s)):
+            # creates new array with axes transpose
             img = np.transpose(image[y:y+p*2+s,x:x+p*2+s,:] / 255.0 - 0.5, (2, 0, 1))[np.newaxis].astype(np.float32)
+            # tensor predict
+            # TODO elaborate on this more
             *_, repro = self.model.predict(img)
+            # place predicted image range into output image range
             output[y*z:(y+s)*z,x*z:(x+s)*z,:] = np.transpose(repro[0] + 0.5, (1, 2, 0))[p*z:-p*z,p*z:-p*z,:]
             print('.', end='', flush=True)
+        # clip limits values values limited to between 0 and 1,
+        # then multiplied by 255 which is max pixel value
         output = output.clip(0.0, 1.0) * 255.0
-
-        # Match color histograms if the user specified this option.
-        if args.rendering_histogram:
-            for i in range(3):
-                output[:,:,i] = self.match_histograms(output[:,:,i], original[:,:,i])
-
+        # returns an image from numpy array
         return scipy.misc.toimage(output, cmin=0, cmax=255)
 
 
@@ -432,6 +420,7 @@ if __name__ == "__main__":
         # imread reads multiple files in color
         img = scipy.ndimage.imread(filename, mode='RGB')
         # calls the major functionality of the enhancer object
+        # passing called image to be processed
         out = enhancer.process(img)
         # saves new image
         out.save(os.path.splitext(filename)[0]+'_ne%ix.png' % args.zoom)
