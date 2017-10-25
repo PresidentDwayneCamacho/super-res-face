@@ -27,6 +27,7 @@ import bz2
 import glob
 import math
 import time
+import dlib
 import pickle
 import random
 import argparse
@@ -104,6 +105,7 @@ def warn(message, *lines):
     string = "\n{}WARNING: " + message + "{}\n" + "\n".join(lines) + "{}\n"
     print(string.format(ansi.YELLOW_B, ansi.YELLOW, ansi.ENDC))
 
+# itertools.chain turns multiple arrays into single array
 def extend(lst): return itertools.chain(lst, itertools.repeat(lst[-1]))
 
 print("""{}   {}Super Resolution for images and videos powered by Deep Learning!{}
@@ -160,20 +162,33 @@ class SubpixelReshuffleLayer(lasagne.layers.Layer):
 
 # class for the Model which will be 'default' in this version
 class Model(object):
+
     # Model constructor
     def __init__(self):
+        # the model class is partially a wrapper
         self.network = collections.OrderedDict()
+        # InputLayer represents network input
+        # first arg is dimension of element
+        # represents the image placed in OrderedDict
+        # InputLayer is lasagne
         self.network['img'] = InputLayer((None, 3, None, None))
+        # put seed of img in OrderedDict
         self.network['seed'] = InputLayer((None, 3, None, None))
 
+        # loads neural network model from bz2 file
+        # configs is a dict with generator values
+        # such as filter, residual, upscale (zoom) value
+        # params keys of network keys and np arrays
         config, params = self.load_model()
+
+
+
+        # create generator
         self.setup_generator(self.last_layer(), config)
 
-        if args.train:
-            concatenated = lasagne.layers.ConcatLayer([self.network['img'], self.network['out']], axis=0)
-            self.setup_perceptual(concatenated)
-            self.load_perceptual()
-            self.setup_discriminator()
+
+
+
         self.load_generator(params)
         self.compile()
 
@@ -182,33 +197,62 @@ class Model(object):
     #------------------------------------------------------------------------------------------------------------------
 
     def last_layer(self):
+        # returns last value from neural network OrderedDict
         return list(self.network.values())[-1]
 
+
     def make_layer(self, name, input, units, filter_size=(3,3), stride=(1,1), pad=(1,1), alpha=0.25):
+        '''
+            name is name of layer
+        '''
+        # Conv2DLayer accepts input layer feeding into this layer
+        # units is generator_filter, number of learnable convolutional filters
+        # filter_size is size of filter
         conv = ConvLayer(input, units, filter_size, stride=stride, pad=pad, nonlinearity=None)
+        # param rectify rectifies nonlinearity
+        # import for neural network image classification
+        # from Delving Deep into Rectifiers (Kaiming He, 2015)
         prelu = lasagne.layers.ParametricRectifierLayer(conv, alpha=lasagne.init.Constant(alpha))
+        # add layer to neural network OrderedDict
         self.network[name+'x'] = conv
+        # add layer to neural network OrderedDict
         self.network[name+'>'] = prelu
+        # return the parametric rectifier
         return prelu
 
+
     def make_block(self, name, input, units):
+        # create another layer
         self.make_layer(name+'-A', input, units, alpha=0.1)
-        # self.make_layer(name+'-B', self.last_layer(), units, alpha=1.0)
         return ElemwiseSumLayer([input, self.last_layer()]) if args.generator_residual else self.last_layer()
 
+
     def setup_generator(self, input, config):
-        for k, v in config.items(): setattr(args, k, v)
+        # iter dict of string keys corresponding to user input
+        # including residual, downscale, upscale, filters
+        # and values associated with them
+        for k, v in config.items():
+            # add attributes to python args values
+            setattr(args, k, v)
+        # raises diff of image scale to exponent of 2
+        # each side factor x increases area by 2**x
         args.zoom = 2**(args.generator_upscale - args.generator_downscale)
-
+        # transforms multiple arrays into one array
         units_iter = extend(args.generator_filters)
+        # returns next item in iterator
         units = next(units_iter)
+        # create input layer of neural network
         self.make_layer('iter.0', input, units, filter_size=(7,7), pad=(3,3))
-
+        # creates hidden layers from downscale generator
         for i in range(0, args.generator_downscale):
+            # create downscale layers from last layer and next generator_filters
             self.make_layer('downscale%i'%i, self.last_layer(), next(units_iter), filter_size=(4,4), stride=(2,2))
 
+        # get next iterator
         units = next(units_iter)
+        # iterate through generator_blocks
         for i in range(0, args.generator_blocks):
+
             self.make_block('iter.%i'%(i+1), self.last_layer(), units)
 
         for i in range(0, args.generator_upscale):
@@ -218,63 +262,6 @@ class Model(object):
 
         self.network['out'] = ConvLayer(self.last_layer(), 3, filter_size=(7,7), pad=(3,3), nonlinearity=None)
 
-    def setup_perceptual(self, input):
-        """Use lasagne to create a network of convolution layers using pre-trained VGG19 weights.
-        """
-        offset = np.array([103.939, 116.779, 123.680], dtype=np.float32).reshape((1,3,1,1))
-        self.network['percept'] = lasagne.layers.NonlinearityLayer(input, lambda x: ((x+0.5)*255.0) - offset)
-
-        self.network['mse'] = self.network['percept']
-        self.network['conv1_1'] = ConvLayer(self.network['percept'], 64, 3, pad=1)
-        self.network['conv1_2'] = ConvLayer(self.network['conv1_1'], 64, 3, pad=1)
-        self.network['pool1']   = PoolLayer(self.network['conv1_2'], 2, mode='max')
-        self.network['conv2_1'] = ConvLayer(self.network['pool1'],   128, 3, pad=1)
-        self.network['conv2_2'] = ConvLayer(self.network['conv2_1'], 128, 3, pad=1)
-        self.network['pool2']   = PoolLayer(self.network['conv2_2'], 2, mode='max')
-        self.network['conv3_1'] = ConvLayer(self.network['pool2'],   256, 3, pad=1)
-        self.network['conv3_2'] = ConvLayer(self.network['conv3_1'], 256, 3, pad=1)
-        self.network['conv3_3'] = ConvLayer(self.network['conv3_2'], 256, 3, pad=1)
-        self.network['conv3_4'] = ConvLayer(self.network['conv3_3'], 256, 3, pad=1)
-        self.network['pool3']   = PoolLayer(self.network['conv3_4'], 2, mode='max')
-        self.network['conv4_1'] = ConvLayer(self.network['pool3'],   512, 3, pad=1)
-        self.network['conv4_2'] = ConvLayer(self.network['conv4_1'], 512, 3, pad=1)
-        self.network['conv4_3'] = ConvLayer(self.network['conv4_2'], 512, 3, pad=1)
-        self.network['conv4_4'] = ConvLayer(self.network['conv4_3'], 512, 3, pad=1)
-        self.network['pool4']   = PoolLayer(self.network['conv4_4'], 2, mode='max')
-        self.network['conv5_1'] = ConvLayer(self.network['pool4'],   512, 3, pad=1)
-        self.network['conv5_2'] = ConvLayer(self.network['conv5_1'], 512, 3, pad=1)
-        self.network['conv5_3'] = ConvLayer(self.network['conv5_2'], 512, 3, pad=1)
-        self.network['conv5_4'] = ConvLayer(self.network['conv5_3'], 512, 3, pad=1)
-
-    def setup_discriminator(self):
-        c = args.discriminator_size
-        self.make_layer('disc1.1', batch_norm(self.network['conv1_2']), 1*c, filter_size=(5,5), stride=(2,2), pad=(2,2))
-        self.make_layer('disc1.2', self.last_layer(), 1*c, filter_size=(5,5), stride=(2,2), pad=(2,2))
-        self.make_layer('disc2', batch_norm(self.network['conv2_2']), 2*c, filter_size=(5,5), stride=(2,2), pad=(2,2))
-        self.make_layer('disc3', batch_norm(self.network['conv3_2']), 3*c, filter_size=(3,3), stride=(1,1), pad=(1,1))
-        hypercolumn = ConcatLayer([self.network['disc1.2>'], self.network['disc2>'], self.network['disc3>']])
-        self.make_layer('disc4', hypercolumn, 4*c, filter_size=(1,1), stride=(1,1), pad=(0,0))
-        self.make_layer('disc5', self.last_layer(), 3*c, filter_size=(3,3), stride=(2,2))
-        self.make_layer('disc6', self.last_layer(), 2*c, filter_size=(1,1), stride=(1,1), pad=(0,0))
-        self.network['disc'] = batch_norm(ConvLayer(self.last_layer(), 1, filter_size=(1,1),
-                                                    nonlinearity=lasagne.nonlinearities.linear))
-
-
-    #------------------------------------------------------------------------------------------------------------------
-    # Input / Output
-    #------------------------------------------------------------------------------------------------------------------
-
-    def load_perceptual(self):
-        """Open the serialized parameters from a pre-trained network, and load them into the model created.
-        """
-        vgg19_file = os.path.join(os.path.dirname(__file__), 'vgg19_conv.pkl.bz2')
-        if not os.path.exists(vgg19_file):
-            error("Model file with pre-trained convolution layers not found. Download here...",
-                  "https://github.com/alexjc/neural-doodle/releases/download/v0.0/vgg19_conv.pkl.bz2")
-
-        data = pickle.load(bz2.open(vgg19_file, 'rb'))
-        layers = lasagne.layers.get_all_layers(self.last_layer(), treat_as_input=[self.network['percept']])
-        for p, d in zip(itertools.chain(*[l.get_params() for l in layers]), data): p.set_value(d)
 
     def list_generator_layers(self):
         for l in lasagne.layers.get_all_layers(self.network['out'], treat_as_input=[self.network['img']]):
@@ -282,9 +269,14 @@ class Model(object):
             name = list(self.network.keys())[list(self.network.values()).index(l)]
             yield (name, l)
 
+
+    # simple function to return filename of neural network
     def get_filename(self, absolute=False):
+        # look for pretrained network based on zoo, type, model
         filename = 'ne%ix-%s-%s-%s.pkl.bz2' % (args.zoom, args.type, args.model, __version__)
+        # return absoulte path of the network
         return os.path.join(os.path.dirname(__file__), filename) if absolute else filename
+
 
     def save_generator(self):
         def cast(p): return p.get_value().astype(np.float16)
@@ -295,13 +287,21 @@ class Model(object):
         pickle.dump((config, params), bz2.open(self.get_filename(absolute=True), 'wb'))
         print('  - Saved model as `{}` after training.'.format(self.get_filename()))
 
+
     def load_model(self):
+        # condition checks if path of neural network exists
         if not os.path.exists(self.get_filename(absolute=True)):
+            # return empty dicts if input for training
             if args.train: return {}, {}
+            # error message if neural network not found and not training
             error("Model file with pre-trained convolution layers not found. Download it here...",
                   "https://github.com/alexjc/neural-enhance/releases/download/v%s/%s"%(__version__, self.get_filename()))
+        # output which model is being used for training
         print('  - Loaded file `{}` with trained model.'.format(self.get_filename()))
+        # opens bzip2-compressed file in binary mode, return file object
+        # pickle reads object representation from file object file
         return pickle.load(bz2.open(self.get_filename(absolute=True), 'rb'))
+
 
     def load_generator(self, params):
         if len(params) == 0: return
@@ -319,14 +319,18 @@ class Model(object):
     def loss_perceptual(self, p):
         return lasagne.objectives.squared_error(p[:args.batch_size], p[args.batch_size:]).mean()
 
+
     def loss_total_variation(self, x):
         return T.mean(((x[:,:,:-1,:-1] - x[:,:,1:,:-1])**2 + (x[:,:,:-1,:-1] - x[:,:,:-1,1:])**2)**1.25)
+
 
     def loss_adversarial(self, d):
         return T.mean(1.0 - T.nnet.softminus(d[args.batch_size:]))
 
+
     def loss_discriminator(self, d):
         return T.mean(T.nnet.softminus(d[args.batch_size:]) - T.nnet.softplus(d[:args.batch_size]))
+
 
     def compile(self):
         # Helper function for rendering test images during training, or standalone inference mode.
@@ -428,9 +432,7 @@ if __name__ == "__main__":
         # imread reads multiple files in color
         img = scipy.ndimage.imread(filename, mode='RGB')
         # calls the major functionality of the enhancer object
-        start = time.time()
         out = enhancer.process(img)
-        print('\nTime to process',time.time()-start,'seconds.\n')
         # saves new image
         out.save(os.path.splitext(filename)[0]+'_ne%ix.png' % args.zoom)
         # flush ensures that output goes to destination
