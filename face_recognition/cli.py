@@ -12,12 +12,20 @@ import sys
 
 
 def scan_known_people(known_people_folder):
+    # init list of faces intended to be found
     known_names = []
+    # init list of numpy array of face
     known_face_encodings = []
 
+    # iterate files in designated folder
     for file in image_files_in_folder(known_people_folder):
+        # get base of dir for image, ie image folder
         basename = os.path.splitext(os.path.basename(file))[0]
+        # wrapper to call scipy imgread
+        # img is numpy array
         img = face_recognition.load_image_file(file)
+        # encodings is 128 dim face encoding
+        # can pass num jitters which is num times image resampled
         encodings = face_recognition.face_encodings(img)
 
         if len(encodings) > 1:
@@ -62,6 +70,8 @@ def test_image(image_to_check, known_names, known_face_encodings, tolerance=0.6,
 
 
 def image_files_in_folder(folder):
+    # look in folder for base directory
+    # match with any jpeg
     return [os.path.join(folder, f) for f in os.listdir(folder) if re.match(r'.*\.(jpg|jpeg|png)', f, flags=re.I)]
 
 
@@ -96,6 +106,7 @@ def process_images_in_process_pool(images_to_check, known_names, known_face_enco
 @click.option('--tolerance', default=0.6, help='Tolerance for face comparisons. Default is 0.6. Lower this if you get multiple matches for the same person.')
 @click.option('--show-distance', default=False, type=bool, help='Output face distance. Useful for tweaking tolerance setting.')
 def main(known_people_folder, image_to_check, cpus, tolerance, show_distance):
+    # begin by scanning ground against which to recognize novel faces
     known_names, known_face_encodings = scan_known_people(known_people_folder)
 
     # Multi-core processing only supported on Python 3.4 or greater
@@ -112,5 +123,7 @@ def main(known_people_folder, image_to_check, cpus, tolerance, show_distance):
         test_image(image_to_check, known_names, known_face_encodings, tolerance, show_distance)
 
 
+# entry point of program
 if __name__ == "__main__":
+    # call driver program
     main()
