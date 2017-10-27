@@ -17,7 +17,7 @@ def scan_known_people(known_people_folder):
     # init list of numpy array of face
     known_face_encodings = []
 
-    # iterate files in designated folder
+    # iterate files in designated folder passed as argument
     for file in image_files_in_folder(known_people_folder):
         # get base of dir for image, ie image folder
         basename = os.path.splitext(os.path.basename(file))[0]
@@ -27,16 +27,22 @@ def scan_known_people(known_people_folder):
         # encodings is 128 dim face encoding
         # can pass num jitters which is num times image resampled
         encodings = face_recognition.face_encodings(img)
-
+        # condition if multiple faces, which are not used
         if len(encodings) > 1:
+            # error message for user that multiple faces found
             click.echo("WARNING: More than one face found in {}. Only considering the first face.".format(file))
-
+        # condition if no faces found
         if len(encodings) == 0:
+            # error message if no faces found
             click.echo("WARNING: No faces found in {}. Ignoring file.".format(file))
+        # condition if one or more faces
         else:
+            # base file name
             known_names.append(basename)
+            # list of encodings
+            # which was determined by dlib predictor
             known_face_encodings.append(encodings[0])
-
+    # return list of known names and encodings
     return known_names, known_face_encodings
 
 
@@ -70,7 +76,7 @@ def test_image(image_to_check, known_names, known_face_encodings, tolerance=0.6,
 
 
 def image_files_in_folder(folder):
-    # look in folder for base directory
+    # look in dir given by path
     # match with any jpeg
     return [os.path.join(folder, f) for f in os.listdir(folder) if re.match(r'.*\.(jpg|jpeg|png)', f, flags=re.I)]
 
@@ -99,6 +105,7 @@ def process_images_in_process_pool(images_to_check, known_names, known_face_enco
     pool.starmap(test_image, function_parameters)
 
 
+# the @argument allows positional arguments to be input
 @click.command()
 @click.argument('known_people_folder')
 @click.argument('image_to_check')

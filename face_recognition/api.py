@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
+# import scipy functionality
 import scipy.misc
+# import dlib
+# allows for face recognition functionality
 import dlib
+# numpy for image array and manipulation
 import numpy as np
 
 try:
@@ -12,9 +16,11 @@ except:
     print("pip install git+https://github.com/ageitgey/face_recognition_models")
     quit()
 
+# 
 face_detector = dlib.get_frontal_face_detector()
-
+#
 predictor_68_point_model = face_recognition_models.pose_predictor_model_location()
+#
 pose_predictor_68_point = dlib.shape_predictor(predictor_68_point_model)
 
 predictor_5_point_model = face_recognition_models.pose_predictor_five_point_model_location()
@@ -44,6 +50,7 @@ def _css_to_rect(css):
     :param css:  plain tuple representation of the rect in (top, right, bottom, left) order
     :return: a dlib `rect` object
     """
+    # trim img to dlib rectangle
     return dlib.rectangle(css[3], css[0], css[1], css[2])
 
 
@@ -94,9 +101,13 @@ def _raw_face_locations(img, number_of_times_to_upsample=1, model="hog"):
                   deep-learning model which is GPU/CUDA accelerated (if available). The default is "hog".
     :return: A list of dlib 'rect' objects of found face locations
     """
+    # if using cnn model condition
     if model == "cnn":
+        # calls dlib.cnn_face_detection_model_v1(cnn_face_detection_model)
         return cnn_face_detector(img, number_of_times_to_upsample)
+    # using 'hog' leaning model
     else:
+        # calls dlib.get_frontal_face_detector()
         return face_detector(img, number_of_times_to_upsample)
 
 
@@ -147,16 +158,27 @@ def batch_face_locations(images, number_of_times_to_upsample=1, batch_size=128):
 
 
 def _raw_face_landmarks(face_image, face_locations=None, model="large"):
+    # condition if no preloaded face
     if face_locations is None:
+        # calls either hog or cnn accepting numpy image
+        # without passing 'cnn', _raw_face_locations calls 'hog'
+        # wrapper for dlib dlib.get_frontal_face_detector()
         face_locations = _raw_face_locations(face_image)
+    # condition if preloaded face
     else:
+        # a list of dlib rect trimmed from given location 4-point tuple
         face_locations = [_css_to_rect(face_location) for face_location in face_locations]
-
+    # pose_predictor_68_point is
+    # dlib.shape_predictor(predictor_68_point_model)
+    # pose predictor for default large model
     pose_predictor = pose_predictor_68_point
-
+    # condition if selected model is small
+    # by default, it isn't
     if model == "small":
+        # pose predictor 5 point is smaller model
         pose_predictor = pose_predictor_5_point
-
+    # modify each face location
+    # pose_predictor, either dlib 5 point or 68 point depending on model
     return [pose_predictor(face_image, face_location) for face_location in face_locations]
 
 
@@ -194,8 +216,12 @@ def face_encodings(face_image, known_face_locations=None, num_jitters=1):
     :param num_jitters: How many times to re-sample the face when calculating encoding. Higher is more accurate, but slower (i.e. 100 is 100x slower)
     :return: A list of 128-dimentional face encodings (one for each face in the image)
     """
+    # face_image is numpy (scipy) img
+    # known_face_locations optional
+    # dlib pose predictor requires dlib face locations
     raw_landmarks = _raw_face_landmarks(face_image, known_face_locations, model="small")
-
+    # face_encoder is dlib.face_recognition_model_v1(face_recognition_model)
+    # encode for each for found raw_landmarks
     return [np.array(face_encoder.compute_face_descriptor(face_image, raw_landmark_set, num_jitters)) for raw_landmark_set in raw_landmarks]
 
 
@@ -209,3 +235,7 @@ def compare_faces(known_face_encodings, face_encoding_to_check, tolerance=0.6):
     :return: A list of True/False values indicating which known_face_encodings match the face encoding to check
     """
     return list(face_distance(known_face_encodings, face_encoding_to_check) <= tolerance)
+
+
+
+# face recognition api

@@ -1,6 +1,7 @@
 # face recognition example
 import face_recognition
 from PIL import Image
+import dlib
 import cv2
 
 ground_picture = face_recognition.load_image_file('img/araya.jpg')
@@ -17,7 +18,7 @@ for location in face_locations:
     top,right,bottom,left = location
     face_array = unknown_picture[top:bottom,left:right]
     picture_array = unknown_picture[:,:]
-    cv2.rectangle(picture_array,(left,top),(right,bottom),(0,255,0),3)
+    cv2.rectangle(picture_array,(left,top),(right,bottom),(255,255,255),3)
 
     if results[0] == True:
         subject = 'Tom Araya'
