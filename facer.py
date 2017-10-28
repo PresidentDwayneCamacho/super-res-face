@@ -87,8 +87,8 @@ def warn(message, *lines):
 # itertools.chain turns multiple arrays into single array
 def extend(lst): return itertools.chain(lst, itertools.repeat(lst[-1]))
 
-print("""{}   {}Super Resolution for images and videos powered by Deep Learning!{}
-  - Code licensed as AGPLv3, models under CC BY-NC-SA.{}""".format(ansi.CYAN_B, __doc__, ansi.CYAN, ansi.ENDC))
+#print("""{}   {}Super Resolution for images and videos powered by Deep Learning!{}
+#  - Code licensed as AGPLv3, models under CC BY-NC-SA.{}""".format(ansi.CYAN_B, __doc__, ansi.CYAN, ansi.ENDC))
 
 # Load the underlying deep learning libraries based on the device specified.  If you specify THEANO_FLAGS manually,
 # the code assumes you know what you are doing and they are not overriden!
@@ -112,7 +112,7 @@ import lasagne
 from lasagne.layers import Conv2DLayer as ConvLayer, Deconv2DLayer as DeconvLayer, Pool2DLayer as PoolLayer
 from lasagne.layers import InputLayer, ConcatLayer, ElemwiseSumLayer, batch_norm
 
-print('{}  - Using the device `{}` for neural computation.{}\n'.format(ansi.CYAN, theano.config.device, ansi.ENDC))
+#print('{}  - Using the device `{}` for neural computation.{}\n'.format(ansi.CYAN, theano.config.device, ansi.ENDC))
 
 
 #======================================================================================================================
@@ -335,8 +335,8 @@ class NeuralEnhancer(object):
         # condition for error if no files input
         if len(args.files) == 0: error("Specify the image(s) to enhance on the command-line.")
         # output to user the images specified
-        print('{}Enhancing {} image(s) specified on the command-line.{}'\
-              .format(ansi.BLUE_B, len(args.files), ansi.BLUE))
+        #print('{}Enhancing {} image(s) specified on the command-line.{}'\
+        #      .format(ansi.BLUE_B, len(args.files), ansi.BLUE))
 
         # init DataLoader if training required, ie loader == true
         # thread == None if no training required
@@ -411,7 +411,7 @@ def neural_enhance():
     enhancer = NeuralEnhancer(loader=False)
     return enhancer
 
-
+'''
 # entry point of program
 if __name__ == "__main__":
     # initialize enhancer object
@@ -438,7 +438,7 @@ if __name__ == "__main__":
         print(flush=True)
     # clear colors for console output
     print(ansi.ENDC)
-
+'''
 
 
 
