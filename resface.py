@@ -3,24 +3,17 @@ import cv2
 import sys
 import numpy as np
 import time
+import scipy
+from facer import neural_enhance
 
-from facer import NeuralEnhancer
-
-
-
-
-
-def init_enhancer():
-    enhance = NeuralEnhancer(loader=False)
 
 
 def single_frame():
-    vid = init_video()
-    _,frame = vid.read()
-    enhancer = NeuralEnhancer(loader=False)
-    out = enhancer.process(frame)
-    out.save('vid/jay.png')
-    #cv2.imshow('',out)
+    enhancer = neural_enhance()
+    img = scipy.ndimage.imread('img/bruce.jpg', mode='RGB')
+    out = enhancer.process(img)
+    out.save('img/bruce_ne2x.png')
+    print(flush=True)
 
 
 

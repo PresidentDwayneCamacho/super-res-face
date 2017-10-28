@@ -386,6 +386,31 @@ class NeuralEnhancer(object):
         # returns an image from numpy array
         return scipy.misc.toimage(output, cmin=0, cmax=255)
 
+'''
+def neural_enhance():
+    args.files = ['img/bruce.jpg']
+    args.zoom = 2
+    args.model = 'default'
+    args.type = 'photo'
+    enhancer = NeuralEnhancer(loader=False)
+    for filename in args.files:
+        print(filename, end=' ')
+        img = scipy.ndimage.imread(filename, mode='RGB')
+        out = enhancer.process(img)
+        out.save(os.path.splitext(filename)[0]+'_ne%ix.png' % args.zoom)
+        print(flush=True)
+    print(ansi.ENDC)
+'''
+
+
+def neural_enhance():
+    args.files = ['img/bruce.jpg']
+    args.zoom = 2
+    args.model = 'default'
+    args.type = 'photo'
+    enhancer = NeuralEnhancer(loader=False)
+    return enhancer
+
 
 # entry point of program
 if __name__ == "__main__":
