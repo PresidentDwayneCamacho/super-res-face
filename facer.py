@@ -45,34 +45,13 @@ add_arg('files',                nargs='*', default=[])
 add_arg('--zoom',               default=2, type=int,                help='Resolution increase factor for inference.')
 add_arg('--rendering-tile',     default=80, type=int,               help='Size of tiles used for rendering images.')
 add_arg('--rendering-overlap',  default=24, type=int,               help='Number of pixels padding around each tile.')
-add_arg('--rendering-histogram',default=False, action='store_true', help='Match color histogram of output to input.')
 add_arg('--type',               default='photo', type=str,          help='Name of the neural network to load/save.')
 add_arg('--model',              default='default', type=str,        help='Specific trained version of the model.')
-add_arg('--train',              default=False, type=str,            help='File pattern to load for training.')
-add_arg('--train-scales',       default=0, type=int,                help='Randomly resize images this many times.')
-add_arg('--train-blur',         default=None, type=int,             help='Sigma value for gaussian blur preprocess.')
-add_arg('--train-noise',        default=None, type=float,           help='Radius for preprocessing gaussian blur.')
-add_arg('--train-jpeg',         default=[], nargs='+', type=int,    help='JPEG compression level & range in preproc.')
-add_arg('--epochs',             default=10, type=int,               help='Total number of iterations in training.')
-add_arg('--epoch-size',         default=72, type=int,               help='Number of batches trained in an epoch.')
-add_arg('--save-every',         default=10, type=int,               help='Save generator after every training epoch.')
-add_arg('--batch-shape',        default=192, type=int,              help='Resolution of images in training batch.')
-add_arg('--batch-size',         default=15, type=int,               help='Number of images per training batch.')
-add_arg('--buffer-size',        default=1500, type=int,             help='Total image fragments kept in cache.')
-add_arg('--buffer-fraction',    default=5, type=int,                help='Fragments cached for each image loaded.')
-add_arg('--learning-rate',      default=1E-4, type=float,           help='Parameter for the ADAM optimizer.')
-add_arg('--learning-period',    default=75, type=int,               help='How often to decay the learning rate.')
-add_arg('--learning-decay',     default=0.5, type=float,            help='How much to decay the learning rate.')
 add_arg('--generator-upscale',  default=2, type=int,                help='Steps of 2x up-sampling as post-process.')
 add_arg('--generator-downscale',default=0, type=int,                help='Steps of 2x down-sampling as preprocess.')
 add_arg('--generator-filters',  default=[64], nargs='+', type=int,  help='Number of convolution units in network.')
 add_arg('--generator-blocks',   default=4, type=int,                help='Number of residual blocks per iteration.')
 add_arg('--generator-residual', default=2, type=int,                help='Number of layers in a residual block.')
-add_arg('--perceptual-layer',   default='conv2_2', type=str,        help='Which VGG layer to use as loss component.')
-add_arg('--perceptual-weight',  default=1e0, type=float,            help='Weight for VGG-layer perceptual loss.')
-add_arg('--discriminator-size', default=32, type=int,               help='Multiplier for number of filters in D.')
-add_arg('--smoothness-weight',  default=2e5, type=float,            help='Weight of the total-variation loss.')
-add_arg('--adversary-weight',   default=5e2, type=float,            help='Weight of adversarial loss compoment.')
 add_arg('--generator-start',    default=0, type=int,                help='Epoch count to start training generator.')
 add_arg('--discriminator-start',default=1, type=int,                help='Epoch count to update the discriminator.')
 add_arg('--adversarial-start',  default=2, type=int,                help='Epoch for generator to use discriminator.')
@@ -188,6 +167,7 @@ class Model(object):
         # calls function to generate callable objects from graphs
         # used mainly during testing
         self.compile()
+
 
     #------------------------------------------------------------------------------------------------------------------
     # Network Configuration
@@ -411,6 +391,11 @@ class NeuralEnhancer(object):
 if __name__ == "__main__":
     # initialize enhancer object
     # loader == false if no training
+    args.files = ['img/bruce.jpg']
+    args.zoom = 2
+    args.model = 'default'
+    args.type = 'photo'
+
     enhancer = NeuralEnhancer(loader=False)
     # loops through each file passed as args
     for filename in args.files:
@@ -428,6 +413,8 @@ if __name__ == "__main__":
         print(flush=True)
     # clear colors for console output
     print(ansi.ENDC)
+
+
 
 
 # end of file
