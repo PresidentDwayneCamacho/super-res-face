@@ -2,7 +2,7 @@ from dlibface import encode_face,recognize_face
 from facer import neural_enhance
 import numpy as np
 import scipy
-import dlib
+#import dlib
 import time
 import cv2
 import sys

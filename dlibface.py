@@ -37,16 +37,6 @@ def recognize_face(face_encodings,face_to_compare):
     return list(distance <= tolerance)
 
 
-'''
-def test():
-    img01 = init_img('img/araya.jpg')
-    encoding01 = encode_face(img01)[0]
-    img02 = init_img('img/unknown.jpg')
-    encoding02 = encode_face(img02)[0]
-    return recognize_face([encoding01],encoding02)
-'''
-
-#print(test())
 
 
 

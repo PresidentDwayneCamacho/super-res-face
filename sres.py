@@ -333,7 +333,7 @@ class NeuralEnhancer(object):
     # and initialize dataloader and model used
     def __init__(self, loader):
         # condition for error if no files input
-        if len(args.files) == 0: error("Specify the image(s) to enhance on the command-line.")
+        #if len(args.files) == 0: error("Specify the image(s) to enhance on the command-line.")
         # output to user the images specified
         #print('{}Enhancing {} image(s) specified on the command-line.{}'\
         #      .format(ansi.BLUE_B, len(args.files), ansi.BLUE))
@@ -386,59 +386,17 @@ class NeuralEnhancer(object):
         # returns an image from numpy array
         return scipy.misc.toimage(output, cmin=0, cmax=255)
 
-'''
-def neural_enhance():
-    args.files = ['img/bruce.jpg']
-    args.zoom = 2
-    args.model = 'default'
-    args.type = 'photo'
-    enhancer = NeuralEnhancer(loader=False)
-    for filename in args.files:
-        print(filename, end=' ')
-        img = scipy.ndimage.imread(filename, mode='RGB')
-        out = enhancer.process(img)
-        out.save(os.path.splitext(filename)[0]+'_ne%ix.png' % args.zoom)
-        print(flush=True)
-    print(ansi.ENDC)
-'''
-
 
 def neural_enhance():
-    args.files = ['img/bruce.jpg']
+    #args.files = ['img/bruce.jpg']
+    args.files = []
     args.zoom = 2
     args.model = 'default'
     args.type = 'photo'
     enhancer = NeuralEnhancer(loader=False)
     return enhancer
 
-'''
-# entry point of program
-if __name__ == "__main__":
-    # initialize enhancer object
-    # loader == false if no training
-    args.files = ['img/bruce.jpg']
-    args.zoom = 2
-    args.model = 'default'
-    args.type = 'photo'
 
-    enhancer = NeuralEnhancer(loader=False)
-    # loops through each file passed as args
-    for filename in args.files:
-        # prints each filename args
-        print(filename, end=' ')
-        # TODO change this to video file
-        # imread reads multiple files in color
-        img = scipy.ndimage.imread(filename, mode='RGB')
-        # calls the major functionality of the enhancer object
-        # passing called image to be processed
-        out = enhancer.process(img)
-        # saves new image
-        out.save(os.path.splitext(filename)[0]+'_ne%ix.png' % args.zoom)
-        # flush ensures that output goes to destination
-        print(flush=True)
-    # clear colors for console output
-    print(ansi.ENDC)
-'''
 
 
 
