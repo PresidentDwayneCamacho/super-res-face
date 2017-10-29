@@ -1,5 +1,5 @@
 from dlibface import encode_face,recognize_face
-from facer import neural_enhance
+from sres import neural_enhance
 import numpy as np
 import scipy
 #import dlib
@@ -29,22 +29,27 @@ def enhancement(filepath):
     writer.release()
 
 
-# attempt at real time face recognition
+# wroking near real time face recognition
 def recognize(ground_file,unknown_file,subject):
     ground_img = init_img(ground_file)
-    known = encode_face(ground_img)[0]
+    known = encode_face(ground_img)[0][0]
     vid = cv2.VideoCapture(unknown_file)
     while vid.isOpened():
         ret,frame = vid.read()
         if ret:
-            unknown = encode_face(frame)[0]
-            results = recognize_face([known],unknown)
-            result = results[0]
-            if result:
-                subtitle = ' '.join(subject)
-            else:
-                subtitle = 'Unknown person'
-            cv2.putText(frame,subtitle,(100,100),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
+            unknowns,locations = encode_face(frame)
+            for unknown,rect in zip(unknowns,locations):
+                results = recognize_face([known],unknown)
+                result = results[0]
+                if result:
+                    subtitle = ' '.join(subject)
+                else:
+                    subtitle = 'Unknown person'
+                top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
+                cv2.rectangle(frame,(left,top),(right,bottom),(0,0,255),2)
+                cv2.rectangle(frame,(left,bottom-35),(right,bottom),(0,0,255),cv2.FILLED)
+                font = cv2.FONT_HERSHEY_DUPLEX
+                cv2.putText(frame,subtitle,(left+6,bottom-6),font,1.0,(255,255,255),1)
             cv2.imshow('',frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

@@ -28,7 +28,10 @@ def init_img(filepath):
 def encode_face(face_image):
     face_locations = face_detector(face_image,1)
     raw_landmarks = [pose_predictor(face_image, face_location) for face_location in face_locations]
-    return [np.array(face_encoder.compute_face_descriptor(face_image,raw_landmark_set,1)) for raw_landmark_set in raw_landmarks]
+    encode = [np.array(face_encoder.compute_face_descriptor(face_image,raw_landmark_set,1)) for raw_landmark_set in raw_landmarks]
+    #return encode,face_locations
+    #locations = face_locations
+    return encode,face_locations
 
 
 def recognize_face(face_encodings,face_to_compare):
