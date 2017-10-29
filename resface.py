@@ -12,35 +12,28 @@ def init_img(filepath):
     return scipy.ndimage.imread(filepath)
 
 
-def single_frame():
-    enhancer = neural_enhance()
-    img = scipy.ndimage.imread('img/bruce.jpg', mode='RGB')
-    out = enhancer.process(img)
-    out.save('img/bruce_neur2x.png')
-    print(flush=True)
-
-
-def enhancement():
-    enhancer = neural_enhance()
-    frames = full_video()
+def enhancement(filepath):
+    frames = full_video(filepath)
     images = []
-    # this needs to be halved for avi files
-    frame_num = int(len(frames)/2)
-    for i in range(frame_num):
+    enhancer = neural_enhance()
+    frame_num = len(frames)
+    if '.avi' in filepath:
+        frame_num = int(frame_num/2)
+    for i in range(int(frame_num/20)):
         images.append(np.array(enhancer.process(frames[i])))
         print('\n',i+1,'/',frame_num)
     h,w,l = images[0].shape
-    writer = cv2.VideoWriter("vid/rich_out.avi", cv2.VideoWriter_fourcc(*"MJPG"), 10,(w,h))
+    writer = cv2.VideoWriter("vid/rich_out.avi", cv2.VideoWriter_fourcc(*"MJPG"), 15, (w,h))
     for img in images:
         writer.write(img)
     writer.release()
 
+
 # attempt at real time face recognition
-def recognize():
-    ground_img = init_img('img/rich.jpg')
+def recognize(ground_file,unknown_file,subject):
+    ground_img = init_img(ground_file)
     known = encode_face(ground_img)[0]
-    #vid = init_video()
-    vid = cv2.VideoCapture('vid/rich.mp4')
+    vid = cv2.VideoCapture(unknown_file)
     while vid.isOpened():
         ret,frame = vid.read()
         if ret:
@@ -48,9 +41,9 @@ def recognize():
             results = recognize_face([known],unknown)
             result = results[0]
             if result:
-                subtitle = 'Rich is here!'
+                subtitle = ' '.join(subject)
             else:
-                subtitle = 'Not here!'
+                subtitle = 'Unknown person'
             cv2.putText(frame,subtitle,(100,100),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
             cv2.imshow('',frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -61,28 +54,18 @@ def recognize():
     cv2.destroyAllWindows()
 
 
-def user_input():
-    if len(sys.argv) >= 2:
-        return sys.argv[1]
+def driver():
+    if len(sys.argv) >= 4:
+        # ground, test video, name
+        recognize(sys.argv[1],sys.argv[2],sys.argv[3:])
+    elif len(sys.argv) == 2:
+        enhancement(sys.argv[1])
     else:
-        return 'vid/rich.mp4'
+        print('Improper number of arguments')
+        print('Recognition: ground, test video, subject name')
 
 
-def pathway():
-    if len(sys.argv) >= 3:
-        if sys.argv[2] == 'encode':
-            return True
-    return False
-
-
-def init_video():
-    filepath = user_input()
-    vid = cv2.VideoCapture(filepath)
-    return vid
-
-
-def full_video():
-    filepath = user_input()
+def full_video(filepath):
     vid = cv2.VideoCapture(filepath)
     size = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
     frames = [vid.read()[1] for x in range(size)]
@@ -90,10 +73,7 @@ def full_video():
 
 
 if __name__ == '__main__':
-    if pathway():
-        enhancement()
-    else:
-        recognize()
+    driver()
 
 
 
