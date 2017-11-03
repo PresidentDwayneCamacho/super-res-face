@@ -2,7 +2,6 @@ from dlibface import encode_face,recognize_face
 from sres import neural_enhance
 import numpy as np
 import scipy
-#import dlib
 import time
 import cv2
 import sys
@@ -14,8 +13,8 @@ def init_img(filepath):
 
 def enhancement(filepath):
     frames = full_video(filepath)
-    images = []
     enhancer = neural_enhance()
+    images = []
     frame_num = len(frames)
     if '.avi' in filepath:
         frame_num = int(frame_num/2)
