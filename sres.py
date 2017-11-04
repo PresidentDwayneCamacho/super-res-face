@@ -18,126 +18,159 @@
 # without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
 
+# init the version
 __version__ = '0.3'
 
-import io
+# interact with operating system
+# for directory information
 import os
+# interact with user/terminal window
 import sys
+# reads .bz2 files
+# and creates data stream
 import bz2
-import glob
-import math
-import time
-import dlib
+# pickle allows package of json files
 import pickle
-import random
+# allows arguments to be attached to objects
 import argparse
+# iterators
 import itertools
-import threading
+# collections allows OrderedDict
+# which is 'centerpeice' of neural network
 import collections
-import face_recognition
 
 
 # Configure all options first so we can later custom-load other libraries (Theano) based on device specified by user.
 parser = argparse.ArgumentParser(description='Generate a new image by applying style onto a content image.',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+# shorten name of parser object/var
 add_arg = parser.add_argument
+# args to designate files to read
 add_arg('files',                nargs='*', default=[])
+# args to designate the increase of pixels
 add_arg('--zoom',               default=2, type=int,                help='Resolution increase factor for inference.')
+# args to designate subdivisions of rendered tiles
 add_arg('--rendering-tile',     default=80, type=int,               help='Size of tiles used for rendering images.')
+# args to designate padding of pixel tiles
 add_arg('--rendering-overlap',  default=24, type=int,               help='Number of pixels padding around each tile.')
+# args determines neural network that will be used
 add_arg('--type',               default='photo', type=str,          help='Name of the neural network to load/save.')
+# args to designate pretrained neural network version
 add_arg('--model',              default='default', type=str,        help='Specific trained version of the model.')
+# args to designate increase image size
 add_arg('--generator-upscale',  default=2, type=int,                help='Steps of 2x up-sampling as post-process.')
+# args to designate decrease image size
 add_arg('--generator-downscale',default=0, type=int,                help='Steps of 2x down-sampling as preprocess.')
+# args to designate number convolution units in network
 add_arg('--generator-filters',  default=[64], nargs='+', type=int,  help='Number of convolution units in network.')
+# args to designate residual blocks per iteration
 add_arg('--generator-blocks',   default=4, type=int,                help='Number of residual blocks per iteration.')
+# args to designate layers in block
 add_arg('--generator-residual', default=2, type=int,                help='Number of layers in a residual block.')
+# args to designate beginning of generator
 add_arg('--generator-start',    default=0, type=int,                help='Epoch count to start training generator.')
+# args to designate update of descriminator
 add_arg('--discriminator-start',default=1, type=int,                help='Epoch count to update the discriminator.')
+# args to designate beginning of start
 add_arg('--adversarial-start',  default=2, type=int,                help='Epoch for generator to use discriminator.')
+# args to designate cpu or gpu
 add_arg('--device',             default='cpu', type=str,            help='Name of the CPU/GPU to use, for Theano.')
+# args to designate shorten name of parse_args
 args = parser.parse_args()
-
 
 #----------------------------------------------------------------------------------------------------------------------
 
-# Color coded output helps visualize the information a little better, plus it looks cool!
+# Color coded output helps visualize the information
 class ansi:
-    WHITE = '\033[0;97m'
-    WHITE_B = '\033[1;97m'
+    # yellow for warning
     YELLOW = '\033[0;33m'
+    # yellow for warning
     YELLOW_B = '\033[1;33m'
+    # red for error
     RED = '\033[0;31m'
+    # red for error
     RED_B = '\033[1;31m'
-    BLUE = '\033[0;94m'
-    BLUE_B = '\033[1;94m'
-    CYAN = '\033[0;36m'
-    CYAN_B = '\033[1;36m'
+    # clear ansi color info
     ENDC = '\033[0m'
 
+# error message with undefined number of lines to input
 def error(message, *lines):
+    # generate string with error message
     string = "\n{}ERROR: " + message + "{}\n" + "\n".join(lines) + ("{}\n" if lines else "{}")
+    # print error message to user
     print(string.format(ansi.RED_B, ansi.RED, ansi.ENDC))
+    # exit from the program if improper neural network
     sys.exit(-1)
 
+# warning message with undefined number of lines
 def warn(message, *lines):
+    # generate string with warning message
     string = "\n{}WARNING: " + message + "{}\n" + "\n".join(lines) + "{}\n"
+    # print warning to the user
     print(string.format(ansi.YELLOW_B, ansi.YELLOW, ansi.ENDC))
 
 # itertools.chain turns multiple arrays into single array
 def extend(lst): return itertools.chain(lst, itertools.repeat(lst[-1]))
-
-#print("""{}   {}Super Resolution for images and videos powered by Deep Learning!{}
-#  - Code licensed as AGPLv3, models under CC BY-NC-SA.{}""".format(ansi.CYAN_B, __doc__, ansi.CYAN, ansi.ENDC))
 
 # Load the underlying deep learning libraries based on the device specified.  If you specify THEANO_FLAGS manually,
 # the code assumes you know what you are doing and they are not overriden!
 os.environ.setdefault('THEANO_FLAGS', 'floatX=float32,device={},force_device=True,allow_gc=True,'\
                                       'print_active_device=False'.format(args.device))
 
-# Scientific & Imaging Libraries
+# scientific & imaging libraries
 import numpy as np
+# import scipy functionality, and image read function
 import scipy.ndimage, scipy.misc, PIL.Image
 
-# Numeric Computing (GPU)
+# numeric computing for gpu
 import theano, theano.tensor as T
+# set function to neural network softplus
 T.nnet.softminus = lambda x: x - T.nnet.softplus(x)
 
-# Support ansi colors in Windows too.
+# support ansi colors in windows
 if sys.platform == 'win32':
+    # colorama library used from ansi color codes
     import colorama
 
-# Deep Learning Framework
+# deep learning framework
 import lasagne
+# convolution and deconvolution layers from lasagne
 from lasagne.layers import Conv2DLayer as ConvLayer, Deconv2DLayer as DeconvLayer, Pool2DLayer as PoolLayer
+# beginning layer of neural network
 from lasagne.layers import InputLayer, ConcatLayer, ElemwiseSumLayer, batch_norm
-
-#print('{}  - Using the device `{}` for neural computation.{}\n'.format(ansi.CYAN, theano.config.device, ansi.ENDC))
-
 
 #======================================================================================================================
 # Convolution Networks
 #======================================================================================================================
-
+# reshuffling the neural network
 class SubpixelReshuffleLayer(lasagne.layers.Layer):
-    """Based on the code by ajbrock: https://github.com/ajbrock/Neural-Photo-Editor/
-    """
+    '''
+        Based on the code by ajbrock: https://github.com/ajbrock/Neural-Photo-Editor/
+    '''
     # inherets lasagne.layers.Layer
-
     def __init__(self, incoming, channels, upscale, **kwargs):
+        # inherits from super class
         super(SubpixelReshuffleLayer, self).__init__(incoming, **kwargs)
-        # incoming == layer, channels is , upscale is size of change
+        # init member variables
         self.upscale = upscale
+        # init member variables
         self.channels = channels
 
     def get_output_shape_for(self, input_shape):
+        # upsize the shape of the image if upscale present
         def up(d): return self.upscale * d if d else d
+        # return tuple of shape, including channels and upsized shape
         return (input_shape[0], self.channels, up(input_shape[2]), up(input_shape[3]))
 
+    #
     def get_output_for(self, input, deterministic=False, **kwargs):
+        # replicate zero arrays of a given shape
         out, r = T.zeros(self.get_output_shape_for(input.shape)), self.upscale
+        # repeat loop once for each int upscale
         for y, x in itertools.product(range(r), repeat=2):
+            # return output with given subtensor incremented by input
             out=T.inc_subtensor(out[:,:,y::r,x::r], input[:,r*y+x::r*r,:,:])
+        # return the output incremented by upscale
         return out
 
 
@@ -277,7 +310,7 @@ class Model(object):
         # condition checks if path of neural network exists
         if not os.path.exists(self.get_filename(absolute=True)):
             # return empty dicts if input for training
-            if args.train: return {}, {}
+            #if args.train: return {}, {}
             # error message if neural network not found and not training
             error("Model file with pre-trained convolution layers not found. Download it here...",
                   "https://github.com/alexjc/neural-enhance/releases/download/v%s/%s"%(__version__, self.get_filename()))
@@ -333,10 +366,7 @@ class NeuralEnhancer(object):
     # and initialize dataloader and model used
     def __init__(self, loader):
         # condition for error if no files input
-        #if len(args.files) == 0: error("Specify the image(s) to enhance on the command-line.")
         # output to user the images specified
-        #print('{}Enhancing {} image(s) specified on the command-line.{}'\
-        #      .format(ansi.BLUE_B, len(args.files), ansi.BLUE))
 
         # init DataLoader if training required, ie loader == true
         # thread == None if no training required
@@ -389,15 +419,19 @@ class NeuralEnhancer(object):
 
 def neural_enhance():
     #args.files = ['img/bruce.jpg']
+    # default quantities for arguments
+    # no default files
     args.files = []
+    # double dimensions of image/video
     args.zoom = 2
+    # default model
     args.model = 'default'
+    # use photo, which is default
     args.type = 'photo'
+    # instanciate NeuralEnhancer object
     enhancer = NeuralEnhancer(loader=False)
+    # return instance of NeuralEnhancer
     return enhancer
-
-
-
 
 
 # end of file

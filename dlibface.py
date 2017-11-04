@@ -50,21 +50,33 @@ def encode_face(face_image):
     '''
     # creates object_detector with histogram of oriented gradients
     face_locations = face_detector(face_image,1)
-    #
+    # identifies the important facial landmarks such as
+    # corners mouth and eyes, tips of nose, etc...
+    # for each face in one image of faces
     raw_landmarks = [pose_predictor_68_point(face_image, face_location) for face_location in face_locations]
-    #
+    # encoding is 128D vector where picture of person of choice
+    # mapped near to each other, and different people far apart
+    # face recognition model loaded from file
     encode = [np.array(face_encoder.compute_face_descriptor(face_image,raw_landmark_set,1)) for raw_landmark_set in raw_landmarks]
-    # 
+    # return both the vector encoding of locations and face locations
     return encode,face_locations
 
 
 def recognize_face(face_encodings,face_to_compare):
+    '''
+        determines if ground face_encoded is same as
+        the unknown face_to_compare
+    '''
+    # the cutoff above which the difference between
+    # ground and unknown encodings indicates a match
     tolerance = 0.6
-    distance = np.linalg.norm(face_encodings - face_to_compare,axis=1)
+    # difference between ground and comparison encodings
+    # normal is square root of sum of squares of matrix element
+    # ie magnitude of difference between the encodings
+    distance = np.linalg.norm(face_encodings-face_to_compare,axis=1)
+    # returns boolean list of whether differernces between
+    # encodings is greater than preselected threshold
     return list(distance <= tolerance)
-
-
-
 
 
 # naked dlib
