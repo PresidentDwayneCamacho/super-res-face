@@ -156,13 +156,15 @@ class SubpixelReshuffleLayer(lasagne.layers.Layer):
         # init member variables
         self.channels = channels
 
+    # upscales shape of image if upscale requested
+    # returns tuple including channels and upsized shape
     def get_output_shape_for(self, input_shape):
         # upsize the shape of the image if upscale present
         def up(d): return self.upscale * d if d else d
         # return tuple of shape, including channels and upsized shape
         return (input_shape[0], self.channels, up(input_shape[2]), up(input_shape[3]))
 
-    #
+    # returns specific subtensor incremented by input
     def get_output_for(self, input, deterministic=False, **kwargs):
         # replicate zero arrays of a given shape
         out, r = T.zeros(self.get_output_shape_for(input.shape)), self.upscale
