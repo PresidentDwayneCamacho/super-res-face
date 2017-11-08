@@ -41,8 +41,13 @@ library is unable to discern the face therein. However, when the
 resolution is increased, the library can recognize the face,
 as seen here.
 
-![Training image](demos/ground_imgBruce Springsteen.jpg)
+The ground image against which the Face Recognition was trained.
+[[https://github.com/TreyAmador/super-res-face/blob/master/demos/ground_imgBruce%20Springsteen.jpg]]
 
-![Unaltered image](demos/1x_imgBruce Springsteen.jpg)
+The non-enhanced, low-resolution image.  The dlib face recognition
+functionality was not able to recognize the subject.
+[[https://github.com/TreyAmador/super-res-face/blob/master/demos/1x_imgBruce%20Springsteen.jpg]]
 
-![2x Enhanced image](demos/2x_imgBruce Springsteen.jpg)
+An image enhanced with Neural Enhance.  The face was recognized
+by dlib, as can be seen by the name output to it.
+[[https://github.com/TreyAmador/super-res-face/blob/master/demos/2x_imgBruce%20Springsteen.jpg]]
