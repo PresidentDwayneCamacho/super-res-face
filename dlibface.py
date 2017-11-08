@@ -21,7 +21,6 @@ except:
     print('Face recognition models not importable')
     # exit program if model cannot be imported
     quit()
-
 # dlib.get_frontal_face_detector returns object_detector
 # configured for human faces that are looking at the camera
 # created using scan_fhog_pyramid
@@ -79,4 +78,6 @@ def recognize_face(face_encodings,face_to_compare):
     return list(distance <= tolerance)
 
 
-# naked dlib
+
+
+# end of dlib

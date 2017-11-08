@@ -1,23 +1,3 @@
-#!/usr/bin/env python3
-"""                          _              _
-  _ __   ___ _   _ _ __ __ _| |   ___ _ __ | |__   __ _ _ __   ___ ___
- | '_ \ / _ \ | | | '__/ _` | |  / _ \ '_ \| '_ \ / _` | '_ \ / __/ _ \
- | | | |  __/ |_| | | | (_| | | |  __/ | | | | | | (_| | | | | (_|  __/
- |_| |_|\___|\__,_|_|  \__,_|_|  \___|_| |_|_| |_|\__,_|_| |_|\___\___|
-
-
-      a version of neural-enhance without training functionality
-                made to be more lean and efficient
-
-"""
-#
-# Copyright (c) 2016, Alex J. Champandard.
-#
-# Neural Enhance is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
-# Public License version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-#
-
 # init the version
 __version__ = '0.3'
 
@@ -31,7 +11,7 @@ import sys
 import bz2
 # pickle allows package of json files
 import pickle
-# allows arguments to be attached to objects
+# allows arguments to be attached to 'args' object
 import argparse
 # iterators
 import itertools
@@ -420,7 +400,6 @@ class NeuralEnhancer(object):
 
 
 def neural_enhance():
-    #args.files = ['img/bruce.jpg']
     # default quantities for arguments
     # no default files
     args.files = []
