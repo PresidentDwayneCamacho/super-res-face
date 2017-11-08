@@ -31,4 +31,18 @@ To run the enhancement function through the terminal window, use:
 which will enhance and output the enhanced image at 2x resolution
 
 
-### Demonstrations
+### Preliminary results
+
+Interestingly, preliminary results show that increases in resolution
+can improve the face recognition capacity of the current algorithm.
+
+When given a low resolution image, the pre-trained Face Recognition
+library is unable to discern the face therein. However, when the
+resolution is increased, the library can recognize the face,
+as seen here.
+
+![Training image](demos/ground_imgBruce Springsteen.jpg)
+
+![Unaltered image](demos/1x_imgBruce Springsteen.jpg)
+
+![2x Enhanced image](demos/2x_imgBruce Springsteen.jpg)

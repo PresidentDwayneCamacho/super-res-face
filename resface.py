@@ -67,7 +67,7 @@ def enhancement(filepath):
 
 
 # wroking near real time face recognition
-def recognize(ground_file,unknown_file,subject):
+def recognize_video(ground_file,unknown_file,subject):
     '''
         function to determine if the dlib face recognition
         is able to match the ground subject with the unknown
@@ -132,16 +132,81 @@ def recognize(ground_file,unknown_file,subject):
     cv2.destroyAllWindows()
 
 
+def image_demo(ground_file,unknown_file,zoom,subject):
+    # TODO comment this code, fresh new code!
+
+    enhancer = neural_enhance()
+
+    ground_img = init_img(ground_file)
+    unknown_img = init_img(unknown_file)
+    unknown_img_x2 = init_img(unknown_file)
+    unknown_img_x2 = np.array(enhancer.process(unknown_img_x2))
+
+    ground_encode = encode_face(ground_img)[0][0]
+    unknown_encode,unknown_locations = encode_face(unknown_img)
+    unknown_encode_x2,unknown_locations_x2 = encode_face(unknown_img_x2)
+
+    print('\n')
+
+    ground_img_copy = cv2.cvtColor(ground_img.copy(),cv2.COLOR_BGR2RGB)
+    cv2.imshow('',ground_img_copy)
+    outpath_subject = ' '.join(subject)
+    scipy.misc.imsave('img/ground_img'+outpath_subject+'.jpg',ground_img)
+    cv2.waitKey(0)
+
+    for unknown,rect in zip(unknown_encode,unknown_locations):
+        results = recognize_face([ground_encode],unknown)
+        result = results[0]
+        if result:
+            if isinstance(subject,list):
+                subtitle = ' '.join(subject)
+            else:
+                subtitle = subject
+        else:
+            subtitle = 'Unknown'
+        print(subtitle)
+        top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
+        font = cv2.FONT_HERSHEY_DUPLEX
+        cv2.putText(unknown_img,subtitle,(10,len(unknown_img)-10),font,0.7,(255,255,255),1)
+    unknown_img_copy = cv2.cvtColor(unknown_img.copy(),cv2.COLOR_BGR2RGB)
+    cv2.imshow('',unknown_img_copy)
+    scipy.misc.imsave('img/1x_img'+outpath_subject+'.jpg',unknown_img)
+    cv2.waitKey(0)
+
+    for unknown,rect in zip(unknown_encode_x2,unknown_locations_x2):
+        results = recognize_face([ground_encode],unknown)
+        result = results[0]
+        if result:
+            if isinstance(subject,list):
+                subtitle = ' '.join(subject)
+            else:
+                subtitle = subject
+        else:
+            subtitle = 'Unknown person'
+        top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
+        font = cv2.FONT_HERSHEY_DUPLEX
+        cv2.putText(unknown_img_x2,subtitle,(10,len(unknown_img_x2)-10),font,0.7,(255,255,255),1)
+        print(subtitle)
+    unknown_img_x2_copy = cv2.cvtColor(unknown_img_x2.copy(),cv2.COLOR_BGR2RGB)
+    cv2.imshow('',unknown_img_x2_copy)
+    scipy.misc.imsave('img/2x_img'+outpath_subject+'.jpg',unknown_img_x2)
+    cv2.waitKey(0)
+
+
 def driver():
     '''
         condition to call recognition or enhancement
     '''
+    # TODO allow multiple names to be input for subject
+    if len(sys.argv) >= 5:
+        # ground, test, zoom, subject name
+        image_demo(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4:])
     # if long enough arguments
     # to do face recognition
-    if len(sys.argv) >= 4:
+    elif len(sys.argv) >= 4:
         # attempt to recognize a face from ground vs test
         # ground, test video, name
-        recognize(sys.argv[1],sys.argv[2],sys.argv[3:])
+        recognize_video(sys.argv[1],sys.argv[2],sys.argv[3:])
     # if long enough to increase resolution
     elif len(sys.argv) == 2:
         # enhance pixelation of window
@@ -152,6 +217,22 @@ def driver():
         print('Improper number of arguments')
         # tell how to input terminal window args
         print('Recognition: ground, test video, subject name')
+
+
+def mutex():
+    if len(sys.argv) >= 5:
+        filetype = sys.argv[1].lower()
+        if filetype == 'image':
+            pass
+        elif filetype == 'video':
+            pass
+        else:
+            print('')
+    elif len(sys.argv) >= 3:
+        # go to image enhancement
+        pass
+    else:
+        print('Imporper number of arguments')
 
 
 def full_video(filepath):
