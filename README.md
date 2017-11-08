@@ -6,7 +6,7 @@ This was built using dlib's face recognition functionality,
 a model with 99.38% accuracy on the Labeled Faces in the Wild benchmark,
 and the super-resolution library Neural Enhance.
 
-**Installation**
+### Installation
 
 To use, install numpy, scipy, dlib>=19.3.0, Click>=6.0,
  Pillow, face_recognition_models, Theano==0.8.2, git+https://<span></span>github.com/Lasagne/Lasagne.git@61b1ad1#egg=Lasagne==0.2-dev
@@ -45,15 +45,15 @@ The ground image against which the Face Recognition was trained.
 
 .. image:: demos/ground_imgBruce Springsteen.jpg
 
-![Ground image](demos/ground_imgBruce Springsteen.jpg)
+![Ground image](demos/ground_imgBruce_Springsteen.jpg)
 
 The non-enhanced, low-resolution image.  The dlib face recognition
 functionality was not able to recognize the subject.
 
-![Non-enhanced](demos/1x_imgBruce Springsteen.jpg)
+![Non-enhanced](demos/1x_imgBruce_Springsteen.jpg)
 
 
 An image enhanced with Neural Enhance.  The face was recognized
 by dlib, as can be seen by the name output to it.
 
-![Enhanced](demos/2x_imgBruce Springsteen.jpg)
+![Enhanced](demos/2x_imgBruce_Springsteen.jpg)
