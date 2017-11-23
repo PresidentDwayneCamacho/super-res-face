@@ -68,9 +68,17 @@ def compile_data(f_obj,subject,*args):
     f_obj.write(num+vals+'\n')
 
 
+def compile_data_list(running_data,subject,*args):
+    running_data.append(list(args))
+
+
+def summarize_stats(data):
+    pass
+
+
 def run(img_dir):
     enhancer = neural_enhance()
-    f_obj = open('data.txt','wt')
+    cur_data = []
     for path in img_dir[:2]:
         print(path)
         grd,hres,lres,hresf,lresf = gen_imgs(path)
@@ -83,8 +91,8 @@ def run(img_dir):
         hf = compare_subject(grd_enc,hresf)
         lf = compare_subject(grd_enc,lresf)
         x2f = compare_subject(grd_enc,x2resf)
-        compile_data(f_obj,path,ht,lt,x2t,hf,lf,x2f)
-    f_obj.close()
+        compile_data_list(cur_data,path,ht,lt,x2t,hf,lf,x2f)
+    summarize_stats(cur_data)
 
 
 def driver():
