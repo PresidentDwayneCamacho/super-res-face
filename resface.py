@@ -150,7 +150,7 @@ def image_demo(ground_file,unknown_file,zoom,subject):
 
     ground_img_copy = cv2.cvtColor(ground_img.copy(),cv2.COLOR_BGR2RGB)
     cv2.imshow('',ground_img_copy)
-    outpath_subject = ' '.join(subject)
+    outpath_subject = '_'.join(subject)
     scipy.misc.imsave('img/ground_img'+outpath_subject+'.jpg',ground_img)
     cv2.waitKey(0)
 

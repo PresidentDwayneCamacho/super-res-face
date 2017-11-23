@@ -19,6 +19,8 @@ import itertools
 # which is 'centerpeice' of neural network
 import collections
 
+import numpy as np
+
 
 # Configure all options first so we can later custom-load other libraries (Theano) based on device specified by user.
 parser = argparse.ArgumentParser(description='Generate a new image by applying style onto a content image.',
@@ -395,8 +397,10 @@ class NeuralEnhancer(object):
         # clip limits values values limited to between 0 and 1,
         # then multiplied by 255 which is max pixel value
         output = output.clip(0.0, 1.0) * 255.0
+        # generate newline
+        print('\n')
         # returns an image from numpy array
-        return scipy.misc.toimage(output, cmin=0, cmax=255)
+        return np.array(scipy.misc.toimage(output, cmin=0, cmax=255))
 
 
 def neural_enhance():
