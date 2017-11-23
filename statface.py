@@ -36,32 +36,16 @@ def dir_list(path):
     return [path+x+'/' for x in sorted(os.listdir(path))]
 
 
-'''
-def gen_imgs(subject,grd_file,exp_file):
-    grd_img = init_img(subject+grd_file)
-    hres_img = init_img(subject+exp_file)
-    lres_img = cv2.resize(hres_img,None,fx=0.21,fy=0.21,interpolation=cv2.INTER_CUBIC)
-    return grd_img,hres_img,lres_img
-'''
-
-'''
-def gen_imgs(subject,grd_file,exp_file):
-    grd_img = init_img(subject+grd_file)
-    hres_img = init_img(subject+exp_file)
-    lres_img = init_img(subject+exp_file)
-    return grd_img,hres_img,lres_img
-'''
-
 def gen_imgs(path):
     grd_img = init_img(path+'ground.jpg')
     hres_img = init_img(path+'high.jpg')
     lres_img = init_img(path+'low.jpg')
-    return grd_img,hres_img,lres_img
+    hresf_img = init_img(path+'fhigh.jpg')
+    lresf_img = init_img(path+'flow.jpg')
+    return grd_img,hres_img,lres_img,hresf_img,lresf_img
 
 
-def encode_img(ground,img,encodings):
-    if not encodings:
-        return False
+def encode_img(ground,encodings):
     for enc in encodings:
         results = recognize_face([ground],enc)
         res = results[0]
@@ -69,35 +53,43 @@ def encode_img(ground,img,encodings):
             return True
         else:
             return False
+    return False
 
 
-def determine_subject(grd,hres,lres,x2res):
-    grd_enc = encode_face(grd)[0][0]
-    hres_enc,hres_loc = encode_face(hres)
-    lres_enc,lres_loc = encode_face(lres)
-    x2res_enc,x2res_loc = encode_face(x2res)
-    hres_out = encode_img(grd_enc,hres,hres_enc)
-    lres_out = encode_img(grd_enc,lres,lres_enc)
-    x2res_out = encode_img(grd_enc,x2res,x2res_enc)
+def compare_subject(grd,res):
+    enc,_ = encode_face(res)
+    out = encode_img(grd,enc)
+    return out
 
 
+def compile_data(f_obj,subject,*args):
+    num = subject.split('/')[-1]
+    vals = ','.join([str(int(x)) for x in args])
+    f_obj.write(num+vals+'\n')
 
 
 def run(img_dir):
     enhancer = neural_enhance()
-    for subject in img_dir:
-        grd,hres,lres = gen_imgs(subject)
+    f_obj = open('data.txt','wt')
+    for path in img_dir[:2]:
+        print(path)
+        grd,hres,lres,hresf,lresf = gen_imgs(path)
+        grd_enc = encode_face(grd)[0][0]
         x2res = enhancer.process(lres)
-        determine_subject(grd,hres,lres,x2res)
-
-
-
+        x2resf = enhancer.process(lresf)
+        ht = compare_subject(grd_enc,hres)
+        lt = compare_subject(grd_enc,lres)
+        x2t = compare_subject(grd_enc,x2res)
+        hf = compare_subject(grd_enc,hresf)
+        lf = compare_subject(grd_enc,lresf)
+        x2f = compare_subject(grd_enc,x2resf)
+        compile_data(f_obj,path,ht,lt,x2t,hf,lf,x2f)
+    f_obj.close()
 
 
 def driver():
     img_dir = dir_list('img/')
     run(img_dir)
-
 
 
 if __name__ == '__main__':
