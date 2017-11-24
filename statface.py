@@ -32,12 +32,15 @@ def show_img(img):
     cv2.destroyAllWindows()
 
 
+def show_img_bgr(img):
+    cv2.imshow('',cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+
 def dir_list(filepath):
     return [x for x in sorted(os.listdir(filepath))]
-
-
-#def gen_cond():
-#    return ['ground','high','highf','low','lowf','x2','x2f']
 
 
 def gen_cond():
@@ -48,12 +51,27 @@ def gen_exp():
     return ['ground','high','highf','low','lowf','x2','x2f']
 
 
+def gen_criteria():
+    return ['match','size']
+
 def gen_path(sub,cond):
     return 'img/'+sub+'/'+cond+'.jpg'
 
 
 def gen_img(sub,cond):
     return init_img('img/'+sub+'/'+cond+'.jpg')
+
+
+def print_data(exp_res):
+    sub_dir = dir_list('img/')
+    exp_dir = gen_exp()
+    criteria = ['match','size']
+    for sub in sub_dir:
+        for exp in exp_dir:
+            print(sub,exp,end=' ')
+            for crit in criteria:
+                print(crit,exp_res[sub][exp][crit],end=' ')
+            print('')
 
 
 def gen_exp_res(sub_dir,exp_dir):
@@ -82,11 +100,12 @@ def compare_subject(grd,exp):
         return False,0
 
 
-def compile_data():
+def run_experiment():
     sub_dir = dir_list('img/')
     exp_dir = gen_exp()
     enhancer = neural_enhance()
     exp_res = gen_exp_res(sub_dir,exp_dir)
+    # remove slicing
     for sub in sub_dir:
         print(sub)
         grd_img = gen_img(sub,'ground')
@@ -94,106 +113,65 @@ def compile_data():
         imgs['x2'] = enhancer.process(imgs['low'])
         imgs['x2f'] = enhancer.process(imgs['lowf'])
         grd_enc = encode_face(grd_img)[0][0]
+
+        #print('ground')
+        #show_img_bgr(grd_img)
+
         for key,img in imgs.items():
             match,size = compare_subject(grd_enc,img)
             exp_res[sub][key]['match'] += match
             exp_res[sub][key]['size'] += size
+
+            #print(key,match)
+            #show_img_bgr(img)
+
     return exp_res
 
 
+def compile_data(exp_res):
+
+    sub_dir = dir_list('img/')
+    exp_dir = gen_exp()[1:]
+    res = {x:{'match':[],'size':[]} for x in exp_dir}
+    criteria = gen_criteria()
+
+    for exp in exp_dir:
+        for sub in sub_dir:
+            for crit in criteria:
+                res[exp][crit].append(exp_res[sub][exp][crit])
+
+    ms = {'mean':0.0,'std':0.0}
+    stat = {x:{'match':dict(ms),'size':dict(ms)} for x in exp_dir}
+    for exp in exp_dir:
+        for crit in criteria:
+            stat[exp][crit]['mean'] = np.mean(res[exp][crit])
+            stat[exp][crit]['std'] = np.std(res[exp][crit])
+
+    return stat
+
+
+def display_data(stat):
+    exp_dir = gen_exp()[1:]
+    criteria = gen_criteria()
+    for exp in exp_dir:
+        print(exp)
+        for crit in criteria:
+            print('     {:6} {:0.4f} +/- {:0.4f}'.format(
+                crit,stat[exp][crit]['mean'],stat[exp][crit]['std']
+            ))
+
+
 
 def driver():
-    exp_res = compile_data()
-    pprint(exp_res)
+    exp_res = run_experiment()
+    sum_stat = compile_data(exp_res)
+    display_data(sum_stat)
 
 
 
 if __name__ == '__main__':
     driver()
 
-
-
-'''
-def init_img(filepath):
-    return scipy.ndimage.imread(filepath)
-
-
-def show_img(img):
-    cv2.imshow('',img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-
-def dir_list(path):
-    return [path+x+'/' for x in sorted(os.listdir(path))]
-
-
-def gen_imgs(path):
-    grd_img = init_img(path+'ground.jpg')
-    hres_img = init_img(path+'high.jpg')
-    lres_img = init_img(path+'low.jpg')
-    hresf_img = init_img(path+'fhigh.jpg')
-    lresf_img = init_img(path+'flow.jpg')
-    return grd_img,hres_img,lres_img,hresf_img,lresf_img
-
-
-def encode_img(ground,encodings):
-    if encodings:
-        enc = encodings[0]
-        results = recognize_face([ground],enc)
-        res = results[0]
-        if res:
-            return True
-    return False
-
-
-def compare_subject(grd,res):
-    enc,_ = encode_face(res)
-    out = encode_img(grd,enc)
-    return out
-
-
-def compile_data(f_obj,subject,*args):
-    num = subject.split('/')[-1]
-    vals = ','.join([str(int(x)) for x in args])
-    f_obj.write(num+vals+'\n')
-
-
-def compile_data_list(running_data,subject,*args):
-    running_data.append(list(args))
-
-
-def summarize_stats(data):
-    pass
-
-
-def run(img_dir):
-    enhancer = neural_enhance()
-    cur_data = []
-    for path in img_dir[:2]:
-        print(path)
-        grd,hres,lres,hresf,lresf = gen_imgs(path)
-        grd_enc = encode_face(grd)[0][0]
-        x2res = enhancer.process(lres)
-        x2resf = enhancer.process(lresf)
-        ht = compare_subject(grd_enc,hres)
-        lt = compare_subject(grd_enc,lres)
-        x2t = compare_subject(grd_enc,x2res)
-        hf = compare_subject(grd_enc,hresf)
-        lf = compare_subject(grd_enc,lresf)
-        x2f = compare_subject(grd_enc,x2resf)
-        compile_data_list(cur_data,path,ht,lt,x2t,hf,lf,x2f)
-    summarize_stats(cur_data)
-
-
-def driver():
-    img_dir = dir_list('img/')
-    run(img_dir)
-
-
-if __name__ == '__main__':
-    driver()
-'''
 
 
 # end of file
