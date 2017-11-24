@@ -19,10 +19,102 @@ import sys
 import os
 
 
+from pprint import pprint
+
+
 def init_img(filepath):
-    '''
-        import images as numpy arrays
-    '''
+    return scipy.ndimage.imread(filepath)
+
+
+def show_img(img):
+    cv2.imshow('',img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+def dir_list(filepath):
+    return [x for x in sorted(os.listdir(filepath))]
+
+
+#def gen_cond():
+#    return ['ground','high','highf','low','lowf','x2','x2f']
+
+
+def gen_cond():
+    return ['ground','high','highf','low','lowf']
+
+
+def gen_exp():
+    return ['ground','high','highf','low','lowf','x2','x2f']
+
+
+def gen_path(sub,cond):
+    return 'img/'+sub+'/'+cond+'.jpg'
+
+
+def gen_img(sub,cond):
+    return init_img('img/'+sub+'/'+cond+'.jpg')
+
+
+def gen_exp_res(sub_dir,exp_dir):
+    return {
+        s:{ e:{
+            'size':0.0,'match':0.0
+        } for e in exp_dir } for s in sub_dir
+    }
+
+
+def compare_subject(grd,exp):
+    encs,locs = encode_face(exp)
+    if encs:
+        encoding = encs[0]
+        results = recognize_face([grd],encoding)
+        res = results[0]
+        loc = locs[0]
+        if res:
+            match = True
+        else:
+            match = False
+        top,bottom,left,right = loc.top(),loc.bottom(),loc.left(),loc.right()
+        area = (right-left)*(bottom-top)
+        return match,area
+    else:
+        return False,0
+
+
+def compile_data():
+    sub_dir = dir_list('img/')
+    exp_dir = gen_exp()
+    enhancer = neural_enhance()
+    exp_res = gen_exp_res(sub_dir,exp_dir)
+    for sub in sub_dir:
+        print(sub)
+        grd_img = gen_img(sub,'ground')
+        imgs = {c:gen_img(sub,c) for c in exp_dir[1:-2]}
+        imgs['x2'] = enhancer.process(imgs['low'])
+        imgs['x2f'] = enhancer.process(imgs['lowf'])
+        grd_enc = encode_face(grd_img)[0][0]
+        for key,img in imgs.items():
+            match,size = compare_subject(grd_enc,img)
+            exp_res[sub][key]['match'] += match
+            exp_res[sub][key]['size'] += size
+    return exp_res
+
+
+
+def driver():
+    exp_res = compile_data()
+    pprint(exp_res)
+
+
+
+if __name__ == '__main__':
+    driver()
+
+
+
+'''
+def init_img(filepath):
     return scipy.ndimage.imread(filepath)
 
 
@@ -46,13 +138,12 @@ def gen_imgs(path):
 
 
 def encode_img(ground,encodings):
-    for enc in encodings:
+    if encodings:
+        enc = encodings[0]
         results = recognize_face([ground],enc)
         res = results[0]
         if res:
             return True
-        else:
-            return False
     return False
 
 
@@ -102,7 +193,7 @@ def driver():
 
 if __name__ == '__main__':
     driver()
-
+'''
 
 
 # end of file
