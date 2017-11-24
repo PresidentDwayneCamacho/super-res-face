@@ -24,6 +24,12 @@ import os
 from pprint import pprint
 
 
+import matplotlib.pyplot as plt; plt.rcdefaults()
+
+import matplotlib.pyplot as plt
+
+
+
 def init_img(filepath):
     return scipy.ndimage.imread(filepath)
 
@@ -94,7 +100,6 @@ def compare_subject(grd,exp):
         encoding = encs[0]
         results,distance = tolerance_face([grd],encoding)
         res,loc,dist = results[0],locs[0],distance[0]
-        #print('compare subject',dist)
         top,bottom,left,right = loc.top(),loc.bottom(),loc.left(),loc.right()
         area = (right-left)*(bottom-top)
         return res,dist,area
@@ -123,7 +128,6 @@ def run_experiment():
             match,dist,size = compare_subject(grd_enc,img)
             exp_res[sub][key]['match'] += match
             exp_res[sub][key]['dist'] += dist
-            #print('run exp distance',dist)
             exp_res[sub][key]['size'] += size
 
             #print(key,match)
@@ -148,15 +152,8 @@ def compile_data(exp_res):
             for crit in criteria:
                 res[exp][crit].append(exp_res[sub][exp][crit])
 
-    for exp in exp_dir:
-        print(exp,'match',res[exp]['match'])
-        print(exp,'dist',res[exp]['dist'])
-
-
-
     ms = {'mean':0.0,'std':0.0}
     stat = {x:gen_criteria_dict() for x in exp_dir}
-
     for exp in exp_dir:
         for crit in criteria:
             stat[exp][crit] = dict(ms)
@@ -169,7 +166,55 @@ def compile_data(exp_res):
     return stat
 
 
+def criteria_mean(stat,exp_dir,criteria):
+    return [stat[x][criteria]['mean'] for x in exp_dir]
+
+
+
+def get_label(abbr):
+    if abbr == 'high':
+        label = 'high res'
+    elif abbr == 'highf':
+        label = 'high ctrl'
+    elif abbr == 'low':
+        label = 'low res'
+    elif abbr == 'lowf':
+        label = 'low ctrl'
+    elif abbr == 'x2':
+        label = 'enhanced res'
+    elif abbr == 'x2f':
+        label = 'upres ctrl'
+    return label
+
+
+
 def display_data(stat):
+
+    exp_dir = gen_exp()[1:]
+    criteria = gen_criteria()
+
+    matches = criteria_mean(stat,exp_dir,'match')
+    distance = criteria_mean(stat,exp_dir,'dist')
+    size = criteria_mean(stat,exp_dir,'size')
+
+    #for i,e in enumerate(distance):
+    #    distance[i] = 1.0-e
+
+    labels = [get_label(x) for x in exp_dir]
+
+    x_pos = np.arange(len(exp_dir))
+
+    plt.bar(x_pos,distance,align='center',alpha=0.5)
+    plt.xticks(x_pos,labels)
+    plt.ylabel('vector distance')
+    plt.title('treshold across groups')
+    plt.show()
+
+
+
+
+
+def print_data(stat):
     exp_dir = gen_exp()[1:]
     criteria = gen_criteria()
     for exp in exp_dir:

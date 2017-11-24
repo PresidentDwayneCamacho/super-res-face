@@ -57,3 +57,10 @@ An image enhanced with Neural Enhance.  The face was recognized
 by dlib, as can be seen by the name output to it.
 
 ![Enhanced](demos/2x_imgBruce_Springsteen.jpg)
+
+Example data of multiple image comparisons across experimental groups.
+High resolution, low resolution, and enhanced resolution of
+desired subject, and similar groups with different subject
+were testing for threshold of face recognition. 
+
+![Figure](demos/fig-50-comp.png)
