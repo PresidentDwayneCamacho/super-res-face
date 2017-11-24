@@ -79,5 +79,11 @@ def recognize_face(face_encodings,face_to_compare):
 
 
 
+def tolerance_face(face_encodings,face_to_compare):
+    tolerance = 0.6
+    distance = np.linalg.norm(face_encodings-face_to_compare,axis=1)
+    return list(distance <= tolerance),distance
+
+
 
 # end of dlib
