@@ -133,67 +133,28 @@ def recognize_video(ground_file,unknown_file,subject):
 
 
 def image_demo(ground_file,unknown_file,zoom,subject):
-    # TODO comment this code, fresh new code!
 
     enhancer = neural_enhance()
-
     ground_img = init_img(ground_file)
     unknown_img = init_img(unknown_file)
     unknown_img_x2 = init_img(unknown_file)
     unknown_img_x2 = np.array(enhancer.process(unknown_img_x2))
-
     ground_encode = encode_face(ground_img)[0][0]
-    #unknown_encode,unknown_locations = encode_face(unknown_img)
-    #unknown_encode_x2,unknown_locations_x2 = encode_face(unknown_img_x2)
 
     print('\n')
 
     outpath_subject = '_'.join(subject)
     scipy.misc.imsave('img/ground_img_'+outpath_subject+'.jpg',ground_img)
 
-    unknown_img = recognize_img_out(ground_encode,subject,unknown_img)
+    unknown_img = recognize_img(ground_encode,subject,unknown_img,2)
     scipy.misc.imsave('img/1x_img_'+outpath_subject+'.jpg',unknown_img)
 
-    unknown_img_x2 = recognize_img_out(ground_encode,subject,unknown_img_x2)
-    scipy.misc.imsave('img/2x_img_'+outpath_subject+'.jpg',unknown_img_x2)
-
-    return
-
-
-    for unknown,rect in zip(unknown_encode,unknown_locations):
-        results = recognize_face([ground_encode],unknown)
-        result = results[0]
-        if result:
-            if isinstance(subject,list):
-                subtitle = ' '.join(subject)
-            else:
-                subtitle = subject
-        else:
-            subtitle = 'Unknown'
-        print(subtitle)
-        top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
-        font = cv2.FONT_HERSHEY_DUPLEX
-        cv2.putText(unknown_img,subtitle,(15,len(unknown_img)-5),font,0.5,(255,255,255),1)
-    scipy.misc.imsave('img/1x_img_'+outpath_subject+'.jpg',unknown_img)
-
-    for unknown,rect in zip(unknown_encode_x2,unknown_locations_x2):
-        results = recognize_face([ground_encode],unknown)
-        result = results[0]
-        if result:
-            if isinstance(subject,list):
-                subtitle = ' '.join(subject)
-            else:
-                subtitle = subject
-        else:
-            subtitle = 'Unknown'
-        top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
-        font = cv2.FONT_HERSHEY_DUPLEX
-        cv2.putText(unknown_img_x2,subtitle,(60,len(unknown_img_x2)-10),font,1.0,(255,255,255),1)
-        print(subtitle)
+    unknown_img_x2 = recognize_img(ground_encode,subject,unknown_img_x2,1)
     scipy.misc.imsave('img/2x_img_'+outpath_subject+'.jpg',unknown_img_x2)
 
 
-def recognize_img_out(ground_encode,subject,unknown_img):
+
+def recognize_img(ground_encode,subject,unknown_img,text_factor):
     unknown_encode,unknown_locations = encode_face(unknown_img)
     for unknown,rect in zip(unknown_encode,unknown_locations):
         results = recognize_face([ground_encode],unknown)
@@ -208,8 +169,10 @@ def recognize_img_out(ground_encode,subject,unknown_img):
         print(subtitle)
         top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
         font = cv2.FONT_HERSHEY_DUPLEX
-        cv2.putText(unknown_img,subtitle,(15,len(unknown_img)-5),font,0.5,(255,255,255),1)
-    #scipy.misc.imsave('img/1x_img_'+outpath_subject+'.jpg',unknown_img)
+        #cv2.rectangle(unknown_img,(left,top),(right,bottom),(0,255,0),2//text_factor)
+        #cv2.putText(unknown_img,subtitle,
+        #    (40//text_factor,len(unknown_img)-10//text_factor),
+        #    font,1.0/text_factor,(255,255,255),1)
     return unknown_img
 
 
@@ -238,26 +201,6 @@ def driver():
         print('Improper number of arguments')
         # tell how to input terminal window args
         print('Recognition: ground, test video, subject name')
-
-
-'''
-
-def mutex():
-    if len(sys.argv) >= 5:
-        filetype = sys.argv[1].lower()
-        if filetype == 'image':
-            pass
-        elif filetype == 'video':
-            pass
-        else:
-            print('')
-    elif len(sys.argv) >= 3:
-        # go to image enhancement
-        pass
-    else:
-        print('Imporper number of arguments')
-
-'''
 
 
 def full_video(filepath):
