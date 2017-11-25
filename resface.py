@@ -143,16 +143,22 @@ def image_demo(ground_file,unknown_file,zoom,subject):
     unknown_img_x2 = np.array(enhancer.process(unknown_img_x2))
 
     ground_encode = encode_face(ground_img)[0][0]
-    unknown_encode,unknown_locations = encode_face(unknown_img)
-    unknown_encode_x2,unknown_locations_x2 = encode_face(unknown_img_x2)
+    #unknown_encode,unknown_locations = encode_face(unknown_img)
+    #unknown_encode_x2,unknown_locations_x2 = encode_face(unknown_img_x2)
 
     print('\n')
 
-    ground_img_copy = cv2.cvtColor(ground_img.copy(),cv2.COLOR_BGR2RGB)
-    cv2.imshow('',ground_img_copy)
     outpath_subject = '_'.join(subject)
-    scipy.misc.imsave('img/ground_img'+outpath_subject+'.jpg',ground_img)
-    cv2.waitKey(0)
+    scipy.misc.imsave('img/ground_img_'+outpath_subject+'.jpg',ground_img)
+
+    unknown_img = recognize_img_out(ground_encode,subject,unknown_img)
+    scipy.misc.imsave('img/1x_img_'+outpath_subject+'.jpg',unknown_img)
+
+    unknown_img_x2 = recognize_img_out(ground_encode,subject,unknown_img_x2)
+    scipy.misc.imsave('img/2x_img_'+outpath_subject+'.jpg',unknown_img_x2)
+
+    return
+
 
     for unknown,rect in zip(unknown_encode,unknown_locations):
         results = recognize_face([ground_encode],unknown)
@@ -167,11 +173,8 @@ def image_demo(ground_file,unknown_file,zoom,subject):
         print(subtitle)
         top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
         font = cv2.FONT_HERSHEY_DUPLEX
-        cv2.putText(unknown_img,subtitle,(10,len(unknown_img)-10),font,0.7,(255,255,255),1)
-    unknown_img_copy = cv2.cvtColor(unknown_img.copy(),cv2.COLOR_BGR2RGB)
-    cv2.imshow('',unknown_img_copy)
-    scipy.misc.imsave('img/1x_img'+outpath_subject+'.jpg',unknown_img)
-    cv2.waitKey(0)
+        cv2.putText(unknown_img,subtitle,(15,len(unknown_img)-5),font,0.5,(255,255,255),1)
+    scipy.misc.imsave('img/1x_img_'+outpath_subject+'.jpg',unknown_img)
 
     for unknown,rect in zip(unknown_encode_x2,unknown_locations_x2):
         results = recognize_face([ground_encode],unknown)
@@ -182,15 +185,33 @@ def image_demo(ground_file,unknown_file,zoom,subject):
             else:
                 subtitle = subject
         else:
-            subtitle = 'Unknown person'
+            subtitle = 'Unknown'
         top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
         font = cv2.FONT_HERSHEY_DUPLEX
-        cv2.putText(unknown_img_x2,subtitle,(10,len(unknown_img_x2)-10),font,0.7,(255,255,255),1)
+        cv2.putText(unknown_img_x2,subtitle,(60,len(unknown_img_x2)-10),font,1.0,(255,255,255),1)
         print(subtitle)
-    unknown_img_x2_copy = cv2.cvtColor(unknown_img_x2.copy(),cv2.COLOR_BGR2RGB)
-    cv2.imshow('',unknown_img_x2_copy)
-    scipy.misc.imsave('img/2x_img'+outpath_subject+'.jpg',unknown_img_x2)
-    cv2.waitKey(0)
+    scipy.misc.imsave('img/2x_img_'+outpath_subject+'.jpg',unknown_img_x2)
+
+
+def recognize_img_out(ground_encode,subject,unknown_img):
+    unknown_encode,unknown_locations = encode_face(unknown_img)
+    for unknown,rect in zip(unknown_encode,unknown_locations):
+        results = recognize_face([ground_encode],unknown)
+        result = results[0]
+        if result:
+            if isinstance(subject,list):
+                subtitle = ' '.join(subject)
+            else:
+                subtitle = subject
+        else:
+            subtitle = 'Unknown'
+        print(subtitle)
+        top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
+        font = cv2.FONT_HERSHEY_DUPLEX
+        cv2.putText(unknown_img,subtitle,(15,len(unknown_img)-5),font,0.5,(255,255,255),1)
+    #scipy.misc.imsave('img/1x_img_'+outpath_subject+'.jpg',unknown_img)
+    return unknown_img
+
 
 
 def driver():

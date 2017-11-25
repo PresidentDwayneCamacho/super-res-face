@@ -119,33 +119,8 @@ def run_experiment():
         imgs['x2f'] = enhancer.process(imgs['lowf'])
         grd_enc = encode_face(grd_img)[0][0]
 
-        '''
-        # below is for testing, remove later
-        x2_match = False
-        x2_size = 0
-        not_low_match = False
-        # above is for testing, remove later
-        '''
-
         for key,img in imgs.items():
             match,dist,size = compare_subject(grd_enc,img)
-
-            '''
-            # below is for testing, remove later
-            if key == 'x2':
-                x2_match = match
-                x2_size = size
-            if key == 'low':
-                not_low_match = not match
-            if x2_match and not_low_match:
-                print('')
-                print('increase match here!')
-                print('x2 =',x2_match,'and low =',not not_low_match)
-                print('at size',x2_size)
-                print('')
-            # above is for testing, remove later
-            '''
-
             exp_res[sub][key]['match'] += match
             exp_res[sub][key]['dist'] += dist
             exp_res[sub][key]['size'] += size
@@ -186,8 +161,49 @@ def compile_data(exp_res):
     return stat
 
 
+
+
+def compile_filtered_data(exp_res):
+
+    sub_dir = dir_list('img/')
+    exp_dir = gen_exp()[1:]
+    criteria = gen_criteria()
+    res = {x:gen_criteria_dict() for x in exp_dir}
+
+    for exp in exp_dir:
+        for crit in criteria:
+            res[exp][crit] = []
+
+    for exp in exp_dir:
+        for sub in sub_dir:
+            if sub in exp_res:
+                for crit in criteria:
+                    res[exp][crit].append(exp_res[sub][exp][crit])
+
+    ms = {'mean':0.0,'std':0.0}
+    stat = {x:gen_criteria_dict() for x in exp_dir}
+    for exp in exp_dir:
+        for crit in criteria:
+            stat[exp][crit] = dict(ms)
+
+    for exp in exp_dir:
+        for crit in criteria:
+            stat[exp][crit]['mean'] = np.mean(res[exp][crit])
+            stat[exp][crit]['std'] = np.std(res[exp][crit])
+
+    return stat
+
+
+
+
+
 def criteria_mean(stat,exp_dir,criteria):
     return [stat[x][criteria]['mean'] for x in exp_dir]
+
+
+def criteria_std(stat,exp_dir,criteria):
+    return [stat[x][criteria]['std'] for x in exp_dir]
+
 
 
 def get_label(abbr):
@@ -210,10 +226,18 @@ def get_label(abbr):
 
 
 
-def filter_data(stat):
+def filter_results(exp_res):
     sub_dir = dir_list('img/')
+    conditions = gen_exp()[1:]
+    remove_subject = False
     for sub in sub_dir:
-        
+        x2size = exp_res[sub]['x2']['size']
+        lowsize = exp_res[sub]['low']['size']
+        if x2size > 4000 or lowsize == 0:
+            print(sub,'of size',x2size,'deleted')
+            del exp_res[sub]
+        else:
+            print(sub,'size',x2size,'kept')
 
 
 
@@ -230,13 +254,17 @@ def display_data(stat):
     distance = criteria_mean(stat,exp_dir,'dist')
     size = criteria_mean(stat,exp_dir,'size')
 
+    err_matches = criteria_std(stat,exp_dir,'match')
+    err_distance = criteria_std(stat,exp_dir,'dist')
+    err_size = criteria_std(stat,exp_dir,'size')
+
     for i,e in enumerate(distance):
         distance[i] = 1.0-e
 
     labels = [get_label(x) for x in exp_dir]
     x_pos = np.arange(len(exp_dir))
 
-    plt.bar(x_pos,distance,align='center',alpha=0.5)
+    plt.bar(x_pos,distance,align='center',alpha=0.5,yerr=err_distance)
     plt.xticks(x_pos,labels)
     plt.ylabel('vector distance')
     plt.title('threshold across groups')
@@ -269,14 +297,13 @@ def print_data(stat):
 
 def driver():
     exp_res = run_experiment()
-    sum_stat = compile_data(exp_res)
 
+    print('unfiltered results',len(exp_res))
+    #filter_results(exp_res)
+    print('filtered results',len(exp_res))
 
-    # remove below for testing purposes
-    filter_data(sum_stat)
-    # remove above for testing purposes
-
-
+    # change back to compile_data if you want
+    sum_stat = compile_filtered_data(exp_res)
     display_data(sum_stat)
 
 
