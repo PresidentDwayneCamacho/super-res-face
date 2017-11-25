@@ -66,7 +66,7 @@ def recognize_face(face_encodings,face_to_compare):
         determines if ground face_encoded is same as
         the unknown face_to_compare
     '''
-    # the cutoff above which the difference between
+    # the cutoff below which the difference between
     # ground and unknown encodings indicates a match
     tolerance = 0.6
     # difference between ground and comparison encodings
@@ -80,8 +80,22 @@ def recognize_face(face_encodings,face_to_compare):
 
 
 def tolerance_face(face_encodings,face_to_compare):
+    '''
+        determines if baseline_face encodings is same
+        as unknown face_to_compare
+    '''
+    # cutoff below which the difference between
+    # the unknown and known 128D vector is
+    # below which it is determined to be a match
     tolerance = 0.6
+    # scify default normalization function between
+    # the unknown and known encodings
+    # takes difference between each of the points
+    # of the 128D vectors and finds magnitude
     distance = np.linalg.norm(face_encodings-face_to_compare,axis=1)
+    # returns boolean if magnitude is lower than
+    # predefined tolerance, and the normal value
+    # for purposes of statistical testing
     return list(distance <= tolerance),distance
 
 

@@ -45,7 +45,7 @@ def enhancement(filepath):
         frame_num = int(frame_num/2)
     # iterate through each frame of video
     # TODO remove the divide by 20 when testing is complete
-    for i in range(int(frame_num/20)):
+    for i in range(frame_num):
         # enhance each image of the video
         # convert to np array
         # collect into array of enhance images
@@ -57,7 +57,7 @@ def enhancement(filepath):
     h,w,l = images[0].shape
     # TODO change output directory
     # write frames to video file with mjpg encoding
-    writer = cv2.VideoWriter("vid/rich_out.avi", cv2.VideoWriter_fourcc(*"MJPG"), 15, (w,h))
+    writer = cv2.VideoWriter("vid/rich_out.mp4", cv2.VideoWriter_fourcc(*"MJPG"), 23, (w,h))
     # iterate through each enhanced frame
     for img in images:
         # write single frame each iteration
@@ -219,6 +219,8 @@ def driver():
         print('Recognition: ground, test video, subject name')
 
 
+'''
+
 def mutex():
     if len(sys.argv) >= 5:
         filetype = sys.argv[1].lower()
@@ -233,6 +235,8 @@ def mutex():
         pass
     else:
         print('Imporper number of arguments')
+
+'''
 
 
 def full_video(filepath):

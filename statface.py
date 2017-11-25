@@ -25,9 +25,7 @@ from pprint import pprint
 
 
 import matplotlib.pyplot as plt; plt.rcdefaults()
-
 import matplotlib.pyplot as plt
-
 
 
 def init_img(filepath):
@@ -35,16 +33,9 @@ def init_img(filepath):
 
 
 def show_img(img):
-    cv2.imshow('',img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-
-def show_img_bgr(img):
     cv2.imshow('',cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-
 
 
 def dir_list(filepath):
@@ -52,7 +43,7 @@ def dir_list(filepath):
 
 
 def gen_cond():
-    return ['ground','high','highf','low','lowf']
+    return ['high','low']
 
 
 def gen_exp():
@@ -109,29 +100,58 @@ def compare_subject(grd,exp):
 
 def run_experiment():
     sub_dir = dir_list('img/')
+    cond_dir = gen_cond()
     exp_dir = gen_exp()
     enhancer = neural_enhance()
     exp_res = gen_exp_res(sub_dir,exp_dir)
-    # remove slicing
     for sub in sub_dir:
         print(sub)
         grd_img = gen_img(sub,'ground')
-        imgs = {c:gen_img(sub,c) for c in exp_dir[1:-2]}
+        imgs = {c:gen_img(sub,c) for c in cond_dir}
+        off = (int(sub)+(len(sub_dir))//2)%len(sub_dir)
+        if off < 10:
+            off = '0'+str(off)
+        else:
+            off = str(off)
+        imgs['highf'] = gen_img(off,'high')
+        imgs['lowf'] = gen_img(off,'low')
         imgs['x2'] = enhancer.process(imgs['low'])
         imgs['x2f'] = enhancer.process(imgs['lowf'])
         grd_enc = encode_face(grd_img)[0][0]
 
-        #print('ground')
-        #show_img_bgr(grd_img)
+        '''
+        # below is for testing, remove later
+        x2_match = False
+        x2_size = 0
+        not_low_match = False
+        # above is for testing, remove later
+        '''
 
         for key,img in imgs.items():
             match,dist,size = compare_subject(grd_enc,img)
+
+            '''
+            # below is for testing, remove later
+            if key == 'x2':
+                x2_match = match
+                x2_size = size
+            if key == 'low':
+                not_low_match = not match
+            if x2_match and not_low_match:
+                print('')
+                print('increase match here!')
+                print('x2 =',x2_match,'and low =',not not_low_match)
+                print('at size',x2_size)
+                print('')
+            # above is for testing, remove later
+            '''
+
             exp_res[sub][key]['match'] += match
             exp_res[sub][key]['dist'] += dist
             exp_res[sub][key]['size'] += size
 
-            #print(key,match)
-            #show_img_bgr(img)
+            #print(key)
+            #show_img(img)
 
     return exp_res
 
@@ -170,7 +190,6 @@ def criteria_mean(stat,exp_dir,criteria):
     return [stat[x][criteria]['mean'] for x in exp_dir]
 
 
-
 def get_label(abbr):
     if abbr == 'high':
         label = 'high res'
@@ -188,6 +207,20 @@ def get_label(abbr):
 
 
 
+
+
+
+def filter_data(stat):
+    sub_dir = dir_list('img/')
+    for sub in sub_dir:
+        
+
+
+
+
+
+
+
 def display_data(stat):
 
     exp_dir = gen_exp()[1:]
@@ -197,21 +230,30 @@ def display_data(stat):
     distance = criteria_mean(stat,exp_dir,'dist')
     size = criteria_mean(stat,exp_dir,'size')
 
-    #for i,e in enumerate(distance):
-    #    distance[i] = 1.0-e
+    for i,e in enumerate(distance):
+        distance[i] = 1.0-e
 
     labels = [get_label(x) for x in exp_dir]
-
     x_pos = np.arange(len(exp_dir))
 
     plt.bar(x_pos,distance,align='center',alpha=0.5)
     plt.xticks(x_pos,labels)
     plt.ylabel('vector distance')
-    plt.title('treshold across groups')
+    plt.title('threshold across groups')
+
+    plt.figure()
+    plt.bar(x_pos,matches,align='center',alpha=0.5)
+    plt.xticks(x_pos,labels)
+    plt.ylabel('proportion of matches')
+    plt.title('matches across groups')
+
+    plt.figure()
+    plt.bar(x_pos,size,align='center',alpha=0.5)
+    plt.xticks(x_pos,labels)
+    plt.ylabel('sizes')
+    plt.title('size across groups')
+
     plt.show()
-
-
-
 
 
 def print_data(stat):
@@ -225,12 +267,17 @@ def print_data(stat):
             ))
 
 
-
 def driver():
     exp_res = run_experiment()
     sum_stat = compile_data(exp_res)
-    display_data(sum_stat)
 
+
+    # remove below for testing purposes
+    filter_data(sum_stat)
+    # remove above for testing purposes
+
+
+    display_data(sum_stat)
 
 
 if __name__ == '__main__':
