@@ -23,6 +23,8 @@ import os
 
 from pprint import pprint
 
+from copy import deepcopy
+
 
 import matplotlib.pyplot as plt; plt.rcdefaults()
 import matplotlib.pyplot as plt
@@ -194,16 +196,12 @@ def compile_filtered_data(exp_res):
     return stat
 
 
-
-
-
 def criteria_mean(stat,exp_dir,criteria):
     return [stat[x][criteria]['mean'] for x in exp_dir]
 
 
 def criteria_std(stat,exp_dir,criteria):
     return [stat[x][criteria]['std'] for x in exp_dir]
-
 
 
 def get_label(abbr):
@@ -222,10 +220,6 @@ def get_label(abbr):
     return label
 
 
-
-
-
-
 def filter_results(exp_res):
     sub_dir = dir_list('img/')
     conditions = gen_exp()[1:]
@@ -240,12 +234,7 @@ def filter_results(exp_res):
             print(sub,'size',x2size,'kept')
 
 
-
-
-
-
-
-def display_data(stat):
+def display_data(stat,suffix):
 
     exp_dir = gen_exp()[1:]
     criteria = gen_criteria()
@@ -264,22 +253,23 @@ def display_data(stat):
     labels = [get_label(x) for x in exp_dir]
     x_pos = np.arange(len(exp_dir))
 
+    plt.figure()
     plt.bar(x_pos,distance,align='center',alpha=0.5,yerr=err_distance)
     plt.xticks(x_pos,labels)
     plt.ylabel('vector distance')
-    plt.title('threshold across groups')
+    plt.title('threshold across groups'+suffix)
 
     plt.figure()
-    plt.bar(x_pos,matches,align='center',alpha=0.5)
+    plt.bar(x_pos,matches,align='center',alpha=0.5,yerr=err_matches)
     plt.xticks(x_pos,labels)
     plt.ylabel('proportion of matches')
-    plt.title('matches across groups')
+    plt.title('matches across groups'+suffix)
 
     plt.figure()
-    plt.bar(x_pos,size,align='center',alpha=0.5)
+    plt.bar(x_pos,size,align='center',alpha=0.5,yerr=err_size)
     plt.xticks(x_pos,labels)
     plt.ylabel('sizes')
-    plt.title('size across groups')
+    plt.title('size across groups'+suffix)
 
     plt.show()
 
@@ -298,13 +288,19 @@ def print_data(stat):
 def driver():
     exp_res = run_experiment()
 
+    exp_res_filter = deepcopy(exp_res)
+
     print('unfiltered results',len(exp_res))
-    #filter_results(exp_res)
-    print('filtered results',len(exp_res))
+    filter_results(exp_res_filter)
+    print('filtered results',len(exp_res_filter))
 
     # change back to compile_data if you want
     sum_stat = compile_filtered_data(exp_res)
-    display_data(sum_stat)
+    display_data(sum_stat,'')
+
+    sum_stat_filter = compile_filtered_data(exp_res_filter)
+    display_data(sum_stat_filter,' filtered')
+
 
 
 if __name__ == '__main__':

@@ -132,6 +132,74 @@ def recognize_video(ground_file,unknown_file,subject):
     cv2.destroyAllWindows()
 
 
+def video_demo(ground_file,unknown_file,subject):
+
+    ground_img = init_img(ground_file)
+    known = encode_face(ground_img)[0][0]
+
+    frames = full_video(unknown_file)
+    images = []
+    frame_num = len(frames)
+
+    for i in range(frame_num):
+        frame = frames[i]
+        unknowns,locations = encode_face(frame)
+        for unknown,rect in zip(unknowns,locations):
+            results = recognize_face([known],unknown)
+            result = results[0]
+            if result:
+                subtitle = ' '.join(subject)
+            else:
+                subtitle = '???'
+            top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
+            cv2.rectangle(frame,(left,top),(right,bottom),(0,0,255),2)
+            cv2.rectangle(frame,(left,bottom+20),(right,bottom),(0,0,255),cv2.FILLED)
+            font = cv2.FONT_HERSHEY_DUPLEX
+            cv2.putText(frame,subtitle,(left+4,bottom+16),font,1.0,(255,255,255),1)
+        images.append(frame)
+
+
+        print(i+1,'/',frame_num)
+
+    h,w,l = images[0].shape
+    base = unknown_file.split('.')[0]+'-face-rec.mp4'
+    writer = cv2.VideoWriter(base, cv2.VideoWriter_fourcc(*"MJPG"), 23, (w,h))
+
+    for img in images:
+        writer.write(img)
+    writer.release()
+
+
+    '''
+    ground_img = init_img(ground_file)
+    known = encode_face(ground_img)[0][0]
+    vid = cv2.VideoCapture(unknown_file)
+    while vid.isOpened():
+        ret,frame = vid.read()
+        if ret:
+            unknowns,locations = encode_face(frame)
+            for unknown,rect in zip(unknowns,locations):
+                results = recognize_face([known],unknown)
+                result = results[0]
+                if result:
+                    subtitle = ' '.join(subject)
+                else:
+                    subtitle = '???'
+                top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
+                cv2.rectangle(frame,(left,top),(right,bottom),(0,0,255),2)
+                cv2.rectangle(frame,(left,bottom-35),(right,bottom),(0,0,255),cv2.FILLED)
+                font = cv2.FONT_HERSHEY_DUPLEX
+                cv2.putText(frame,subtitle,(left+6,bottom-6),font,1.0,(255,255,255),1)
+            cv2.imshow('',frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        else:
+            break
+    vid.release()
+    cv2.destroyAllWindows()
+    '''
+
+
 def image_demo(ground_file,unknown_file,zoom,subject):
 
     enhancer = neural_enhance()
@@ -190,7 +258,8 @@ def driver():
     elif len(sys.argv) >= 4:
         # attempt to recognize a face from ground vs test
         # ground, test video, name
-        recognize_video(sys.argv[1],sys.argv[2],sys.argv[3:])
+        #recognize_video(sys.argv[1],sys.argv[2],sys.argv[3:])
+        video_demo(sys.argv[1],sys.argv[2],sys.argv[3:])
     # if long enough to increase resolution
     elif len(sys.argv) == 2:
         # enhance pixelation of window
