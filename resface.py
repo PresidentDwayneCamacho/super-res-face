@@ -133,114 +133,162 @@ def recognize_video(ground_file,unknown_file,subject):
 
 
 def video_demo(ground_file,unknown_file,subject):
-
+    '''
+        create a video demo with
+        face recognition for any video file,
+        whether ehnahced or not
+    '''
+    # import training image as numpy array
     ground_img = init_img(ground_file)
+    # return encoding scheme for training image
+    # used to be compared to all other images
+    # encoding is a 128D array of given face
     known = encode_face(ground_img)[0][0]
-
+    # import full video as a set of frames
+    # frames is array of unedited video images
     frames = full_video(unknown_file)
+    # init empty list to be modified video images
     images = []
+    # get the length of frames
     frame_num = len(frames)
-
+    # iterate through each unedited frame
     for i in range(frame_num):
+        # get current frame
         frame = frames[i]
+        # create recognition and encoding frames
+        # create face encodings and locations
+        # encoding is a 128D array of given face
         unknowns,locations = encode_face(frame)
+        # iterate through unknown encodings and locations
         for unknown,rect in zip(unknowns,locations):
+            # recognize unknown face against the ground
+            # return truthiness array of which faces are recognized
             results = recognize_face([known],unknown)
+            # get first results
+            # usually result array is 1 element list
             result = results[0]
+            # condition if face is recognized
             if result:
+                # make a name of the subject recognized
+                # if they face is recognized
+                # based on the above encoding
                 subtitle = ' '.join(subject)
+            # condition if face is not recognized
             else:
+                # add a default, unknown subtitle
+                # if face is not recognized
                 subtitle = '???'
+            # get each corner of the rectangle
+            # which indicates if a face is recognized
             top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
+            # draw the rectangle bordering the face with a red box
             cv2.rectangle(frame,(left,top),(right,bottom),(0,0,255),2)
+            # draw solid rectangle at bottom of face box
             cv2.rectangle(frame,(left,bottom+20),(right,bottom),(0,0,255),cv2.FILLED)
+            # get the font of the text
             font = cv2.FONT_HERSHEY_DUPLEX
+            # draw the text to the solid bordering
+            # beneath the face if recognized
             cv2.putText(frame,subtitle,(left+4,bottom+16),font,1.0,(255,255,255),1)
+        # add processed frame to the array of processed frames
         images.append(frame)
-
-
+        # print the frame number that is printed to console
+        # this gives a primitive timescale
         print(i+1,'/',frame_num)
-
+    # get the dimensions of the processed image array
+    # for use of resolution output of processed video
     h,w,l = images[0].shape
+    # get filepath of videofile
     base = unknown_file.split('.')[0]+'-face-rec.mp4'
+    # create VideoWriter object
+    # at base video file with specified encoding scheme
+    # at specific frame rate with specific frame size
     writer = cv2.VideoWriter(base, cv2.VideoWriter_fourcc(*"MJPG"), 23, (w,h))
-
+    # iterate through array of images
     for img in images:
+        # write processed file image by image with writer obj
         writer.write(img)
+    # terminate the video writer
     writer.release()
 
 
-    '''
-    ground_img = init_img(ground_file)
-    known = encode_face(ground_img)[0][0]
-    vid = cv2.VideoCapture(unknown_file)
-    while vid.isOpened():
-        ret,frame = vid.read()
-        if ret:
-            unknowns,locations = encode_face(frame)
-            for unknown,rect in zip(unknowns,locations):
-                results = recognize_face([known],unknown)
-                result = results[0]
-                if result:
-                    subtitle = ' '.join(subject)
-                else:
-                    subtitle = '???'
-                top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
-                cv2.rectangle(frame,(left,top),(right,bottom),(0,0,255),2)
-                cv2.rectangle(frame,(left,bottom-35),(right,bottom),(0,0,255),cv2.FILLED)
-                font = cv2.FONT_HERSHEY_DUPLEX
-                cv2.putText(frame,subtitle,(left+6,bottom-6),font,1.0,(255,255,255),1)
-            cv2.imshow('',frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-        else:
-            break
-    vid.release()
-    cv2.destroyAllWindows()
-    '''
-
-
 def image_demo(ground_file,unknown_file,zoom,subject):
-
+    '''
+        function which enhances the resolution of image files
+    '''
+    # init image enhancer (Neural Enhance) object
     enhancer = neural_enhance()
+    # intialize the ground, training image
     ground_img = init_img(ground_file)
+    # init an unknown image
+    # against which to compare the ground image
     unknown_img = init_img(unknown_file)
+    # initialize image which will become doubled image
     unknown_img_x2 = init_img(unknown_file)
+    # enhance image: double resolution of unknown image
+    # convert image to np array
     unknown_img_x2 = np.array(enhancer.process(unknown_img_x2))
+    # encode training image to ground encoding
     ground_encode = encode_face(ground_img)[0][0]
-
+    # newline to console
     print('\n')
-
+    # create filename based on input name of subject
     outpath_subject = '_'.join(subject)
+    # same the ground image to the filepath
     scipy.misc.imsave('img/ground_img_'+outpath_subject+'.jpg',ground_img)
-
+    # call function to encode and recognize unenhanced face image
     unknown_img = recognize_img(ground_encode,subject,unknown_img,2)
+    # same image with output information to directory
     scipy.misc.imsave('img/1x_img_'+outpath_subject+'.jpg',unknown_img)
-
+    # call function to encode and recognize enhanced face image
     unknown_img_x2 = recognize_img(ground_encode,subject,unknown_img_x2,1)
+    # same image with output information to directory
     scipy.misc.imsave('img/2x_img_'+outpath_subject+'.jpg',unknown_img_x2)
 
 
-
 def recognize_img(ground_encode,subject,unknown_img,text_factor):
+    '''
+        function to recognize faces in images
+        based on inputs of the training encoding
+        the name of the subject
+        the unknown image
+    '''
+    # create coding and location of unknown image
     unknown_encode,unknown_locations = encode_face(unknown_img)
+    # iterate through encodings and locations of faces
     for unknown,rect in zip(unknown_encode,unknown_locations):
+        # determine if training face is in unknown image
         results = recognize_face([ground_encode],unknown)
+        # get first element of result list
         result = results[0]
+        # condition to determine if face is recognized in unknown
         if result:
+            # condition if result is a list
             if isinstance(subject,list):
+                # join array into string representing name
                 subtitle = ' '.join(subject)
+            # condition if result is string
             else:
+                # set string name to name
                 subtitle = subject
+        # condition if face is not recognized in unknown
         else:
+            # subject 'name' is unknown
             subtitle = 'Unknown'
+        # output the name of the subject if recognized
+        # or unknown if the subject is not recognized
         print(subtitle)
+        # get corner of the rectangle drawn around recognized face
         top,bottom,left,right = rect.top(),rect.bottom(),rect.left(),rect.right()
+        # set font for subtitle of subject or unknown
         font = cv2.FONT_HERSHEY_DUPLEX
-        #cv2.rectangle(unknown_img,(left,top),(right,bottom),(0,255,0),2//text_factor)
-        #cv2.putText(unknown_img,subtitle,
-        #    (40//text_factor,len(unknown_img)-10//text_factor),
-        #    font,1.0/text_factor,(255,255,255),1)
+        # draw rectangle around the face recognized
+        cv2.rectangle(unknown_img,(left,top),(right,bottom),(0,255,0),2//text_factor)
+        # draw name to the image, either subject or unknown
+        cv2.putText(unknown_img,subtitle,
+            (40//text_factor,len(unknown_img)-10//text_factor),
+            font,1.0/text_factor,(255,255,255),1)
+    # return the processed image
     return unknown_img
 
 
