@@ -22,6 +22,11 @@ $ python resface.py path/to/low/resolution/image
 ```
 which will enhance and output the enhanced image at 2x resolution.
 
+The pretained neural network, ne2x-photo-default-0.3.pkl.bz2, can be found at:
+https://github.com/alexjc/neural-enhance/releases
+
+
+
 ##### Video Example
 
 ![Low Resolution](demos/img/low-res-img-rich.png)
@@ -79,6 +84,16 @@ Example data of multiple image comparisons across experimental groups.
 High resolution, low resolution, and enhanced resolution of
 desired subject, with false positive controls for each condition
 with different subject were testing for threshold of face recognition.
+
+The statistical testing script can be run with:
+
+```
+$ python statface.py
+```
+
+It outputs six matplotlib graphs to the interface.
+
+Some examples are shown here:
 
 
 ![Graph 01](demos/fig-100-matches.png)
