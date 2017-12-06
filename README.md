@@ -48,6 +48,7 @@ The first command will run a demo testing images against a ground training image
 The subject name must be more than one word.
 
 The second command will run a demo video against a ground training image.
+It must be only one word.
 
 It will generate a video where all recognized faces are bound
 by a red box, with the name of the subject if the face is recognized,
